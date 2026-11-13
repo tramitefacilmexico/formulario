@@ -169,10 +169,10 @@ function arranca() {
       }
     } else if (f.type === 'file') {
       r.files = [];
-      var inp = h('input', { type: 'file', accept: 'image/*,application/pdf,.tif,.tiff,.heic' });
+      var inp = h('input', { type: 'file', accept: 'image/*,application/pdf,.pdf,.doc,.docx,.odt,.rtf,.txt,.xls,.xlsx,.tif,.tiff,.heic' });
       if (f.multiple) inp.setAttribute('multiple', '');
       var list = h('ul', { class: 'fl' });
-      var btn = h('button', { class: 'add', type: 'button', text: f.multiple ? 'Elegir o tomar foto(s)' : 'Elegir o tomar foto' });
+      var btn = h('button', { class: 'add', type: 'button', text: f.multiple ? 'Elegir archivo(s) o tomar foto' : 'Elegir archivo o tomar foto' });
       btn.addEventListener('click', function () { inp.click(); });
       inp.addEventListener('change', function () {
         var fs = Array.prototype.slice.call(inp.files);
