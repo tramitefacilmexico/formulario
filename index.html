@@ -382,10 +382,16 @@ function arranca() {
   // ---- envío
   function run(fn) {
     var args = Array.prototype.slice.call(arguments, 1);
-    return fetch(API, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ fn: fn, args: args }) })
-      .then(function (r) { return r.json(); })
+    var ctl = window.AbortController ? new AbortController() : null;
+    var timer = setTimeout(function () { if (ctl) ctl.abort(); }, 120000);
+    return fetch(API, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ fn: fn, args: args }), signal: ctl ? ctl.signal : undefined })
+      .then(function (r) { clearTimeout(timer); return r.json(); })
       .then(function (j) { if (!j.ok) throw new Error(j.error || 'Error desconocido'); return j.data; })
-      .catch(function (e) { throw new Error(e && e.message === 'Failed to fetch' ? 'No hay conexión con el servidor. Revisa tu internet e intenta de nuevo.' : (e && e.message ? e.message : String(e))); });
+      .catch(function (e) {
+        clearTimeout(timer);
+        var m = e && e.message ? e.message : String(e);
+        throw new Error(/Failed to fetch|aborted|abort/i.test(m) ? 'El servidor tardó demasiado o no hay conexión. Revisa tu internet e intenta de nuevo.' : m);
+      });
   }
   function aBase64(blob) {
     return new Promise(function (ok, ko) {
@@ -500,10 +506,11 @@ function arranca() {
   var box = document.getElementById('cargando');
   function msg(t) { box.textContent = t; }
   if (!tok) { msg('Este link no es válido. Pide uno nuevo por WhatsApp.'); return; }
-  // Pide las preguntas al servidor; si tarda más de 20 s reintenta (hasta 3 veces) y si no, avisa.
+  // Pide las preguntas al servidor; a veces Google tarda o no responde, así que si pasan 8 s
+  // reintenta (hasta 5 veces) y si no, avisa.
   function carga(intento) {
     var ctl = window.AbortController ? new AbortController() : null;
-    var timer = setTimeout(function () { if (ctl) ctl.abort(); }, 20000);
+    var timer = setTimeout(function () { if (ctl) ctl.abort(); }, 8000);
     fetch(API + '?api=1&t=' + encodeURIComponent(tok), ctl ? { signal: ctl.signal } : {})
       .then(function (r) { return r.json(); })
       .then(function (j) {
@@ -513,7 +520,7 @@ function arranca() {
       })
       .catch(function () {
         clearTimeout(timer);
-        if (intento < 3) { msg('Cargando formulario… (intento ' + (intento + 1) + ' de 3)'); carga(intento + 1); return; }
+        if (intento < 5) { msg('Cargando formulario… (intento ' + (intento + 1) + ' de 5)'); carga(intento + 1); return; }
         box.textContent = 'No se pudo cargar el formulario. Revisa tu internet y ';
         var a = document.createElement('a'); a.href = location.href; a.textContent = 'toca aquí para reintentar'; box.appendChild(a); box.appendChild(document.createTextNode('.'));
       });
