@@ -510,16 +510,8 @@ function arranca() {
 
     run('iniciar', DATA.token, payload).then(function () {
       avance('Subiendo documentos…');
-      return envios.reduce(function (p, e, i) {
-        return p.then(function () {
-          txt.textContent = 'Subiendo documento ' + (i + 1) + ' de ' + envios.length + '…';
-          return prepara(e.file).then(function (pf) { return aBase64(pf.blob).then(function (b64) {
-            return run('subir', DATA.token, e.id, e.label, pf.name, pf.mime, b64).catch(function () {
-              return run('subir', DATA.token, e.id, e.label, pf.name, pf.mime, b64); // un reintento
-            });
-          }); }).then(function () { avance(); });
-        });
-      }, Promise.resolve());
+      var n = 0;
+      return subeTodo(envios, function () { n++; txt.textContent = 'Subiendo documentos (' + n + ' de ' + envios.length + ')…'; avance(); });
     }).then(function () { return run('finalizar', DATA.token); })
       .then(function (r) {
         avance(); listo(r.faltan || []);
@@ -529,6 +521,34 @@ function arranca() {
         var b = h('button', { class: 'send', type: 'button', text: 'Volver al formulario' }); b.addEventListener('click', cierra);
         overlay(h('div', {}, [h('h2', { text: 'No se pudo enviar' }), h('p', { text: String(e.message || e) }), h('p', { class: 'help', text: 'Tus respuestas siguen aquí. Puedes intentar de nuevo.' }), b]));
       });
+  }
+
+  // Sube los archivos de a 3 a la vez para tardar menos; los archivos de un mismo documento (p. ej. varias hojas del pasaporte)
+  // van uno tras otro, para que sus nombres (Pasaporte, Pasaporte (2)…) no se encimen.
+  function subeTodo(envios, alTerminarUno) {
+    var grupos = {};
+    envios.forEach(function (e) { (grupos[e.id] = grupos[e.id] || []).push(e); });
+    var colas = Object.keys(grupos).map(function (k) { return grupos[k]; });
+    return new Promise(function (ok, ko) {
+      var siguiente = 0, activos = 0, fallo = false;
+      function lanza() {
+        if (fallo) return;
+        if (!colas.length || (siguiente >= colas.length && activos === 0)) { ok(); return; }
+        while (!fallo && activos < 3 && siguiente < colas.length) {
+          activos++;
+          colas[siguiente++].reduce(function (p, e) {
+            return p.then(function () {
+              return prepara(e.file).then(function (pf) { return aBase64(pf.blob).then(function (b64) {
+                return run('subir', DATA.token, e.id, e.label, pf.name, pf.mime, b64).catch(function () {
+                  return run('subir', DATA.token, e.id, e.label, pf.name, pf.mime, b64); // un reintento
+                });
+              }); }).then(function () { if (alTerminarUno) alTerminarUno(); });
+            });
+          }, Promise.resolve()).then(function () { activos--; lanza(); }, function (err) { fallo = true; ko(err); });
+        }
+      }
+      lanza();
+    });
   }
 
   function listo(faltan) {
@@ -629,16 +649,8 @@ function arranca() {
       function avance() { hechos++; barra.style.width = Math.round(hechos * 100 / total) + '%'; }
       (desc ? run('masDocumentos', DATA.token, desc) : Promise.resolve()).then(function () {
         avance();
-        return envios.reduce(function (p, e, i) {
-          return p.then(function () {
-            txt.textContent = 'Subiendo documento ' + (i + 1) + ' de ' + envios.length + '…';
-            return prepara(e.file).then(function (pf) { return aBase64(pf.blob).then(function (b64) {
-              return run('subir', DATA.token, e.id, e.label, pf.name, pf.mime, b64).catch(function () {
-                return run('subir', DATA.token, e.id, e.label, pf.name, pf.mime, b64);
-              });
-            }); }).then(function () { avance(); });
-          });
-        }, Promise.resolve());
+        var n = 0;
+        return subeTodo(envios, function () { n++; txt.textContent = 'Subiendo documentos (' + n + ' de ' + envios.length + ')…'; avance(); });
       }).then(function () { return run('finalizar', DATA.token); })
         .then(function (r) {
           avance();
