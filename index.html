@@ -39,6 +39,10 @@
   .yn input { position:absolute; inset:0; width:100%; height:100%; margin:0; opacity:0; cursor:pointer; }
   .yn label.on { background:var(--navy); color:#fff; border-color:var(--navy); }
   .exp { margin-top:8px; }
+  .redrow { display:grid; gap:8px; padding:10px; border:1px solid var(--line); border-radius:10px; margin-bottom:8px; background:#f8fbfd; }
+  .redrow [hidden] { display:none; }
+  .redes .mas { background:#fff; color:var(--navy); border:1px solid var(--steel); border-radius:8px; padding:9px 14px; font:inherit; font-size:15px; cursor:pointer; }
+  .redes .quita { justify-self:end; border:0; background:none; color:var(--err); font:inherit; font-size:14px; cursor:pointer; padding:2px 0; }
   .f.bad input[type=text], .f.bad input[type=email], .f.bad input[type=tel], .f.bad input[type=date], .f.bad select, .f.bad textarea, .f.bad .yn label { border-color:var(--err); }
   .msg { color:var(--err); font-size:13px; margin-top:4px; display:none; }
   .f.bad .msg { display:block; }
@@ -112,6 +116,7 @@ function arranca() {
   function cumple(si, x) {
     if (!si) return true;
     return [].concat(si).every(function (c) {
+      if ('any' in c) return c.any.some(function (k) { return cumple(k, x); });
       var v = x[c.f];
       if ('eq' in c) return v === c.eq;
       if ('ne' in c) return v !== c.ne;
@@ -176,6 +181,57 @@ function arranca() {
       });
       r.list = list;
       wrap.appendChild(h('div', { class: 'file' }, [btn, inp, list]));
+    } else if (f.type === 'redes') {
+      // Lista de redes sociales: cada fila = red (lista) + usuario; "Agregar otra red" añade filas.
+      var NO_RED = 'No uso redes sociales';
+      var cont = h('div', { class: 'redes' });
+      var filas = h('div', {});
+      r.rows = []; r.incomplete = false;
+      r.input = h('textarea', { id: id, hidden: '' });
+      var updR = function () {
+        var out = [], inc = false;
+        r.rows.forEach(function (o) {
+          var n = o.sel.value;
+          o.nom.hidden = n !== 'Otra'; o.usr.hidden = n === NO_RED;
+          o.del.hidden = r.rows.length < 2;
+          if (!n) { if (o.usr.value.trim()) inc = true; return; }
+          if (n === NO_RED) { out.push(NO_RED); return; }
+          var nombre = n === 'Otra' ? o.nom.value.trim() : n, u = o.usr.value.trim();
+          if (!nombre || !u) { inc = true; return; }
+          out.push(nombre + ': ' + u);
+        });
+        r.incomplete = inc; r.input.value = out.join('\n');
+      };
+      var nuevaFila = function (red, nombre, usuario) {
+        var sel = h('select', { 'aria-label': 'Red social' }, [h('option', { value: '', text: 'Elige la red social…' })].concat(f.opts.map(function (o) { return h('option', { value: o, text: o }); })));
+        var nom = h('input', { type: 'text', placeholder: '¿Cuál red social?', 'aria-label': 'Nombre de la red social', autocomplete: 'off' });
+        var usr = h('input', { type: 'text', placeholder: 'Tu usuario, como aparece', 'aria-label': 'Usuario', autocomplete: 'off' });
+        var del = h('button', { type: 'button', class: 'quita', text: 'Quitar esta red' });
+        var o = { sel: sel, nom: nom, usr: usr, del: del, row: h('div', { class: 'redrow' }, [sel, nom, usr, del]) };
+        if (red) sel.value = red; if (nombre) nom.value = nombre; if (usuario) usr.value = usuario;
+        [sel, nom, usr].forEach(function (e) { e.addEventListener('input', updR); e.addEventListener('change', updR); });
+        del.addEventListener('click', function () {
+          r.rows.splice(r.rows.indexOf(o), 1); filas.removeChild(o.row); updR(); sync();
+        });
+        r.rows.push(o); filas.appendChild(o.row);
+      };
+      var masBtn = h('button', { type: 'button', class: 'mas', text: '+ Agregar otra red' });
+      masBtn.addEventListener('click', function () { nuevaFila(); updR(); sync(); });
+      r.setVal = function (v) {
+        r.rows = []; filas.innerHTML = '';
+        String(v || '').split('\n').forEach(function (ln) {
+          ln = ln.trim(); if (!ln) return;
+          if (ln === NO_RED) { nuevaFila(NO_RED); return; }
+          var k = ln.indexOf(': '); if (k < 0) return;
+          var nombre = ln.slice(0, k), usuario = ln.slice(k + 2);
+          if (f.opts.indexOf(nombre) >= 0) nuevaFila(nombre, '', usuario); else nuevaFila('Otra', nombre, usuario);
+        });
+        if (!r.rows.length) nuevaFila();
+        updR();
+      };
+      r.setVal('');
+      cont.appendChild(filas); cont.appendChild(masBtn); cont.appendChild(r.input);
+      wrap.appendChild(cont);
     } else if (f.type === 'date') {
       // Tres listas (día / mes / año) en lugar del selector nativo de fecha: en algunos celulares
       // el selector nativo dejaba abiertos menús fantasma y bloqueaba los campos de texto.
@@ -254,7 +310,8 @@ function arranca() {
       s.fields.forEach(function (f) {
         if (!st.vis[f.id] || f.type === 'file') return;
         var v = String(st.a[f.id] || '').trim(), m = '';
-        if (!v) { if (f.req) m = f.type === 'select' || f.type === 'yesno' ? 'Selecciona una opción' : 'Este campo es obligatorio'; }
+        if (f.type === 'redes' && refs[f.id].incomplete) m = 'Completa el usuario de cada red o quita la fila que no uses';
+        else if (!v) { if (f.req) m = f.type === 'redes' ? 'Agrega al menos una red social, o elige "No uso redes sociales"' : f.type === 'select' || f.type === 'yesno' ? 'Selecciona una opción' : 'Este campo es obligatorio'; }
         else if (f.type === 'email' && !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v)) m = 'Escribe un correo válido';
         else if (f.type === 'tel' && v.replace(/\D/g, '').length < 8) m = 'Escribe un teléfono válido, con lada';
         else if (f.type === 'yesno' && f.explain && v === 'Sí' && !String(st.a[f.id + '_exp'] || '').trim()) m = 'Escribe la explicación';
