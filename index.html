@@ -502,21 +502,30 @@ function arranca() {
 </script>
 <script>
 (function () {
-  var tok = (new URLSearchParams(location.search)).get('t') || '';
+  var qs = new URLSearchParams(location.search);
+  var tok = qs.get('t') || '';
+  // Link por pedido (lo manda Odoo): ?o=S02667&k=clave&f=USA-Nuevo&n=1; el servidor crea o encuentra el registro
+  var porPedido = !tok && qs.get('o') && qs.get('k');
+  var consulta = porPedido
+    ? 'o=' + encodeURIComponent(qs.get('o')) + '&k=' + encodeURIComponent(qs.get('k')) + '&f=' + encodeURIComponent(qs.get('f') || '') + '&n=' + encodeURIComponent(qs.get('n') || '1')
+    : 't=' + encodeURIComponent(tok);
   var box = document.getElementById('cargando');
   function msg(t) { box.textContent = t; }
-  if (!tok) { msg('Este link no es válido. Pide uno nuevo por WhatsApp.'); return; }
+  if (!tok && !porPedido) { msg('Este link no es válido. Pide uno nuevo por WhatsApp.'); return; }
   // Pide las preguntas al servidor; a veces Google tarda o no responde, así que si pasan 8 s
   // reintenta (hasta 5 veces) y si no, avisa.
   function carga(intento) {
     var ctl = window.AbortController ? new AbortController() : null;
     var timer = setTimeout(function () { if (ctl) ctl.abort(); }, 8000);
-    fetch(API + '?api=1&t=' + encodeURIComponent(tok), ctl ? { signal: ctl.signal } : {})
+    fetch(API + '?api=1&' + consulta, ctl ? { signal: ctl.signal } : {})
       .then(function (r) { return r.json(); })
       .then(function (j) {
         clearTimeout(timer);
         if (!j.ok) { msg(j.error || 'Este link no es válido. Pide uno nuevo por WhatsApp.'); return; }
-        DATA = j.data; box.hidden = true; arranca();
+        DATA = j.data; box.hidden = true;
+        // desde aquí el link es el del registro (?t=); el link por pedido ya no se necesita en la barra
+        if (porPedido && window.history && history.replaceState) { try { history.replaceState(null, '', location.pathname + '?t=' + DATA.token); } catch (e) {} }
+        arranca();
       })
       .catch(function () {
         clearTimeout(timer);
