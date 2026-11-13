@@ -1,0 +1,456 @@
+<!doctype html>
+<html lang="es">
+<head>
+<base target="_top">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Trámite Fácil México</title>
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root { --navy:#103050; --steel:#5080a0; --green:#80c040; --bg:#f2f5f9; --line:#d5dde6; --err:#b3261e; }
+  * { box-sizing:border-box; }
+  html { -webkit-tap-highlight-color:transparent; }
+  button, label, select, input { touch-action:manipulation; }
+  body { margin:0; background:var(--bg); color:var(--navy); font-family:Roboto,Arial,sans-serif; font-size:16px; line-height:1.45; }
+  header { background:var(--navy); color:#fff; padding:22px 16px 18px; border-bottom:4px solid var(--green); }
+  header .in, main, .bar .in { max-width:760px; margin:0 auto; }
+  header h1 { margin:0 0 4px; font-size:22px; }
+  header p { margin:0; color:#cfe0ee; font-size:15px; }
+  .chip { display:inline-block; background:var(--green); color:var(--navy); font-weight:700; font-size:13px; padding:2px 10px; border-radius:99px; margin-top:10px; }
+  main { padding:16px 16px 120px; }
+  .intro { background:#fff; border-left:4px solid var(--steel); border-radius:8px; padding:12px 14px; margin-bottom:16px; font-size:15px; }
+  .card { background:#fff; border-radius:12px; padding:18px 16px 6px; margin-bottom:16px; box-shadow:0 1px 6px rgba(16,48,80,.08); }
+  .card h2 { margin:0 0 4px; font-size:18px; padding-bottom:8px; border-bottom:2px solid var(--green); }
+  .card .ayuda { color:var(--steel); font-size:14px; margin:8px 0 0; }
+  .f { margin:14px 0; }
+  .f[hidden], .card[hidden], .exp[hidden] { display:none; }
+  label.l { display:block; font-weight:500; margin-bottom:4px; }
+  .req { color:var(--err); }
+  .help { color:var(--steel); font-size:13px; margin:2px 0 4px; }
+  input[type=text], input[type=email], input[type=tel], input[type=date], select, textarea {
+    width:100%; font:inherit; font-size:16px; color:var(--navy); background:#fff; border:1px solid var(--line); border-radius:8px; padding:10px 12px; }
+  textarea { min-height:84px; resize:vertical; }
+  .fecha { display:grid; grid-template-columns:0.8fr 1.4fr 1fr; gap:8px; }
+  .fecha select { padding:10px 6px; }
+  input:focus, select:focus, textarea:focus { outline:2px solid var(--steel); border-color:var(--steel); }
+  .yn { display:flex; gap:10px; }
+  .yn label { position:relative; flex:1; text-align:center; border:1px solid var(--line); border-radius:8px; padding:10px; cursor:pointer; background:#fff; }
+  .yn input { position:absolute; inset:0; width:100%; height:100%; margin:0; opacity:0; cursor:pointer; }
+  .yn label.on { background:var(--navy); color:#fff; border-color:var(--navy); }
+  .exp { margin-top:8px; }
+  .f.bad input[type=text], .f.bad input[type=email], .f.bad input[type=tel], .f.bad input[type=date], .f.bad select, .f.bad textarea, .f.bad .yn label { border-color:var(--err); }
+  .msg { color:var(--err); font-size:13px; margin-top:4px; display:none; }
+  .f.bad .msg { display:block; }
+  .file { border:2px dashed var(--steel); border-radius:10px; padding:12px; background:#f8fbfd; }
+  .file button.add { background:#fff; color:var(--navy); border:1px solid var(--steel); border-radius:8px; padding:9px 14px; font:inherit; font-size:15px; cursor:pointer; }
+  .file input[type=file] { display:none; }
+  .fl { list-style:none; margin:8px 0 0; padding:0; }
+  .fl li { display:flex; align-items:center; justify-content:space-between; gap:8px; font-size:14px; padding:4px 0; word-break:break-all; }
+  .fl button { border:0; background:none; color:var(--err); font-size:18px; cursor:pointer; }
+  .bar { position:fixed; left:0; right:0; bottom:0; background:#fff; border-top:1px solid var(--line); padding:10px 16px; box-shadow:0 -2px 10px rgba(16,48,80,.08); }
+  .bar .in { display:flex; align-items:center; gap:14px; }
+  .prog { flex:1; }
+  .prog .t { font-size:13px; color:var(--steel); }
+  .prog .b { height:8px; border-radius:6px; background:var(--line); overflow:hidden; margin-top:3px; }
+  .prog .b i { display:block; height:100%; width:0; background:var(--green); transition:width .2s; }
+  button.send { background:var(--green); color:var(--navy); border:0; border-radius:10px; font:inherit; font-weight:700; padding:12px 22px; cursor:pointer; }
+  button.send:disabled { opacity:.6; cursor:default; }
+  .over { position:fixed; inset:0; background:rgba(16,48,80,.6); display:none; align-items:center; justify-content:center; padding:16px; z-index:10; }
+  .over.on { display:flex; }
+  .box { background:#fff; border-radius:14px; padding:24px; max-width:460px; width:100%; border-top:5px solid var(--green); }
+  .box h2 { margin:0 0 8px; }
+  .box ul { padding-left:20px; }
+  .box button { margin-top:8px; }
+  .ghost { background:#fff; color:var(--navy); border:1px solid var(--steel); border-radius:10px; font:inherit; padding:11px 18px; cursor:pointer; }
+  .pb { height:10px; background:var(--line); border-radius:6px; overflow:hidden; margin:12px 0 4px; }
+  .pb i { display:block; height:100%; width:0; background:var(--green); transition:width .2s; }
+</style>
+</head>
+<body>
+<header><div class="in">
+  <h1>Trámite Fácil México</h1>
+  <p id="sub"></p>
+  <span class="chip" id="chip"></span>
+</div></header>
+<main>
+  <div class="intro">Llena todos los campos. Si no aplica, escribe <b>NINGUNO</b>. Puedes dejar el formulario a medias y volver con este mismo link: lo que escribiste se guarda en este dispositivo (los archivos hay que volver a elegirlos).</div>
+  <div id="cargando" class="intro">Cargando formulario…</div>
+  <div id="app"></div>
+</main>
+<div class="bar"><div class="in">
+  <div class="prog"><div class="t" id="progT"></div><div class="b"><i id="progB"></i></div></div>
+  <button class="send" id="send" type="button">Enviar</button>
+</div></div>
+
+<div class="over" id="over"><div class="box" id="box"></div></div>
+
+<script>
+var API = 'https://script.google.com/macros/s/AKfycbwqaduOJ_bnoQYxWMW_8OkGvov_31RcwXnid4oIPOyr-fqLsoOvWGyf5wZNS2JsQk5_/exec';
+var DATA;
+
+function arranca() {
+  var DOM = document;
+  function $(s, r) { return (r || DOM).querySelector(s); }
+  function h(tag, attrs, kids) {
+    var e = DOM.createElement(tag);
+    Object.keys(attrs || {}).forEach(function (k) {
+      if (k === 'text') e.textContent = attrs[k]; else if (k === 'class') e.className = attrs[k]; else e.setAttribute(k, attrs[k]);
+    });
+    (kids || []).forEach(function (c) { if (c) e.appendChild(c); });
+    return e;
+  }
+
+  // ---- lógica de visibilidad (misma que en Campos.gs)
+  function isMinor(iso, edad) {
+    if (!iso) return false;
+    var p = String(iso).split('-'); if (p.length !== 3) return false;
+    var hoy = new Date(), a = hoy.getFullYear() - Number(p[0]), m = hoy.getMonth() + 1 - Number(p[1]);
+    if (m < 0 || (m === 0 && hoy.getDate() < Number(p[2]))) a--;
+    return a < edad;
+  }
+  function cumple(si, x) {
+    if (!si) return true;
+    return [].concat(si).every(function (c) {
+      var v = x[c.f];
+      if ('eq' in c) return v === c.eq;
+      if ('ne' in c) return v !== c.ne;
+      if ('in' in c) return c['in'].indexOf(v) >= 0;
+      return !!v;
+    });
+  }
+
+  var refs = {};   // id -> {def, wrap, input, files[]}
+  var secEls = {}; // id -> card
+
+  function build() {
+    $('#sub').textContent = 'Formulario para tu trámite de visa · ' + (DATA.pais === 'Canada' ? 'Canadá' : DATA.pais);
+    $('#chip').textContent = DATA.tipo;
+    var app = $('#app');
+    DATA.sections.forEach(function (s) {
+      var card = h('section', { class: 'card' });
+      card.appendChild(h('h2', { text: s.titulo }));
+      if (s.ayuda) card.appendChild(h('p', { class: 'ayuda', text: s.ayuda }));
+      s.fields.forEach(function (f) { card.appendChild(buildField(f)); });
+      secEls[s.id] = card; app.appendChild(card);
+    });
+  }
+
+  function buildField(f) {
+    var wrap = h('div', { class: 'f' });
+    var lab = h('label', { class: 'l', text: f.label + (f.req && f.type !== 'file' ? ' ' : '') });
+    if (f.req && f.type !== 'file') lab.appendChild(h('span', { class: 'req', text: '*' }));
+    wrap.appendChild(lab);
+    if (f.help) wrap.appendChild(h('div', { class: 'help', text: f.help }));
+    var r = { def: f, wrap: wrap };
+    var id = 'c_' + f.id;
+    if (f.type === 'textarea') { r.input = h('textarea', { id: id }); wrap.appendChild(r.input); }
+    else if (f.type === 'select') {
+      r.input = h('select', { id: id }, [h('option', { value: '', text: 'Selecciona…' })].concat(f.opts.map(function (o) { return h('option', { value: o, text: o }); })));
+      wrap.appendChild(r.input);
+    } else if (f.type === 'yesno') {
+      var yn = h('div', { class: 'yn' });
+      r.radios = ['Sí', 'No'].map(function (v) {
+        var inp = h('input', { type: 'radio', name: id, value: v });
+        var l = h('label', {}, [inp, DOM.createTextNode(v)]);
+        yn.appendChild(l); inp.addEventListener('change', function () { sync(); });
+        return inp;
+      });
+      wrap.appendChild(yn);
+      if (f.explain) {
+        r.exp = h('div', { class: 'exp', hidden: '' }, [h('div', { class: 'help', text: f.explain }), h('textarea', { id: id + '_exp' })]);
+        r.expInput = $('textarea', r.exp);
+        wrap.appendChild(r.exp);
+      }
+    } else if (f.type === 'file') {
+      r.files = [];
+      var inp = h('input', { type: 'file', accept: 'image/*,application/pdf,.tif,.tiff,.heic' });
+      if (f.multiple) inp.setAttribute('multiple', '');
+      var list = h('ul', { class: 'fl' });
+      var btn = h('button', { class: 'add', type: 'button', text: f.multiple ? 'Elegir o tomar foto(s)' : 'Elegir o tomar foto' });
+      btn.addEventListener('click', function () { inp.click(); });
+      inp.addEventListener('change', function () {
+        var fs = Array.prototype.slice.call(inp.files);
+        if (!f.multiple) r.files = [];
+        r.files = r.files.concat(fs); inp.value = ''; paintFiles(r, list); sync();
+      });
+      r.list = list;
+      wrap.appendChild(h('div', { class: 'file' }, [btn, inp, list]));
+    } else if (f.type === 'date') {
+      // Tres listas (día / mes / año) en lugar del selector nativo de fecha: en algunos celulares
+      // el selector nativo dejaba abiertos menús fantasma y bloqueaba los campos de texto.
+      var fut = /llegada|salida/i.test(f.id), hoy = new Date(), y0 = hoy.getFullYear();
+      var meses = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+      var op = function (v, t) { return h('option', { value: v, text: t }); };
+      var sd = h('select', { 'aria-label': 'Día' }, [op('', 'Día')]), sm = h('select', { 'aria-label': 'Mes' }, [op('', 'Mes')]), sa = h('select', { 'aria-label': 'Año' }, [op('', 'Año')]);
+      var i;
+      for (i = 1; i <= 31; i++) sd.appendChild(op(i < 10 ? '0' + i : String(i), String(i)));
+      for (i = 1; i <= 12; i++) sm.appendChild(op(i < 10 ? '0' + i : String(i), meses[i - 1]));
+      if (fut) for (i = y0; i <= y0 + 2; i++) sa.appendChild(op(String(i), String(i)));
+      else for (i = y0; i >= 1920; i--) sa.appendChild(op(String(i), String(i)));
+      r.input = h('input', { id: id, type: 'hidden' });
+      var upd = function () { r.input.value = (sd.value && sm.value && sa.value) ? sa.value + '-' + sm.value + '-' + sd.value : ''; };
+      [sd, sm, sa].forEach(function (s) { s.addEventListener('change', upd); });
+      r.setVal = function (v) {
+        var p = String(v || '').split('-');
+        if (p.length === 3) { sa.value = p[0]; sm.value = p[1]; sd.value = p[2]; } else { sa.value = sm.value = sd.value = ''; }
+        upd();
+      };
+      wrap.appendChild(h('div', { class: 'fecha' }, [sd, sm, sa]));
+      wrap.appendChild(r.input);
+    } else {
+      var type = f.type === 'email' ? 'email' : f.type === 'tel' ? 'tel' : f.type === 'date' ? 'date' : 'text';
+      r.input = h('input', { id: id, type: type });
+      if (type === 'text') r.input.setAttribute('autocomplete', 'off');
+      wrap.appendChild(r.input);
+    }
+    wrap.appendChild(h('div', { class: 'msg' }));
+    refs[f.id] = r;
+    return wrap;
+  }
+
+  function paintFiles(r, ul) {
+    ul.innerHTML = '';
+    r.files.forEach(function (file, i) {
+      var b = h('button', { type: 'button', text: '✕', 'aria-label': 'Quitar' });
+      b.addEventListener('click', function () { r.files.splice(i, 1); paintFiles(r, ul); sync(); });
+      ul.appendChild(h('li', {}, [h('span', { text: file.name }), b]));
+    });
+  }
+
+  function raw() {
+    var a = {};
+    Object.keys(refs).forEach(function (id) {
+      var r = refs[id], t = r.def.type;
+      if (t === 'file') return;
+      if (t === 'yesno') {
+        var c = r.radios.filter(function (x) { return x.checked; })[0];
+        a[id] = c ? c.value : '';
+        if (r.expInput) a[id + '_exp'] = r.expInput.value;
+      } else a[id] = r.input.value;
+    });
+    return a;
+  }
+
+  function state() {
+    var a = raw();
+    var x = { _pais: DATA.pais, _tipo: DATA.tipo, _menor: isMinor(a.fechaNac, 18), _menor14: isMinor(a.fechaNac, 14) };
+    var vis = {};
+    DATA.sections.forEach(function (s) {
+      var sv = cumple(s.showIf, x);
+      s.fields.forEach(function (f) {
+        var v = sv && cumple(f.showIf, x);
+        vis[f.id] = v;
+        if (v) x[f.id] = a[f.id];
+      });
+      vis['sec:' + s.id] = sv;
+    });
+    return { a: a, vis: vis };
+  }
+
+  function validar(st) {
+    var errs = [];
+    DATA.sections.forEach(function (s) {
+      s.fields.forEach(function (f) {
+        if (!st.vis[f.id] || f.type === 'file') return;
+        var v = String(st.a[f.id] || '').trim(), m = '';
+        if (!v) { if (f.req) m = f.type === 'select' || f.type === 'yesno' ? 'Selecciona una opción' : 'Este campo es obligatorio'; }
+        else if (f.type === 'email' && !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v)) m = 'Escribe un correo válido';
+        else if (f.type === 'tel' && v.replace(/\D/g, '').length < 8) m = 'Escribe un teléfono válido, con lada';
+        else if (f.type === 'yesno' && f.explain && v === 'Sí' && !String(st.a[f.id + '_exp'] || '').trim()) m = 'Escribe la explicación';
+        if (m) errs.push({ id: f.id, m: m });
+      });
+    });
+    return errs;
+  }
+
+  function pintaErrores(errs) {
+    Object.keys(refs).forEach(function (id) { refs[id].wrap.classList.remove('bad'); });
+    errs.forEach(function (e) {
+      var w = refs[e.id].wrap; w.classList.add('bad'); $('.msg', w).textContent = e.m;
+    });
+  }
+
+  function sync() {
+    var st = state();
+    DATA.sections.forEach(function (s) {
+      var secVis = st.vis['sec:' + s.id];
+      secEls[s.id].hidden = !secVis;
+      s.fields.forEach(function (f) {
+        var r = refs[f.id], v = st.vis[f.id];
+        r.wrap.hidden = !v;
+        if (r.radios) {
+          r.radios.forEach(function (i) { i.parentNode.classList.toggle('on', i.checked); });
+          if (r.exp) r.exp.hidden = st.a[f.id] !== 'Sí';
+        }
+      });
+    });
+    // progreso: campos obligatorios visibles ya llenos
+    var tot = 0, ok = 0;
+    DATA.sections.forEach(function (s) {
+      s.fields.forEach(function (f) {
+        if (!st.vis[f.id] || !f.req || f.type === 'file') return;
+        tot++;
+        var v = String(st.a[f.id] || '').trim();
+        if (v && !(f.type === 'yesno' && f.explain && v === 'Sí' && !String(st.a[f.id + '_exp'] || '').trim())) ok++;
+      });
+    });
+    var pct = tot ? Math.round(ok * 100 / tot) : 0;
+    $('#progT').textContent = ok + ' de ' + tot + ' campos obligatorios';
+    $('#progB').style.width = pct + '%';
+    guardaBorrador(st.a);
+  }
+
+  // ---- borrador local
+  var KEY = 'tfm_borrador_' + DATA.token;
+  var tmr;
+  function guardaBorrador(a) {
+    clearTimeout(tmr);
+    tmr = setTimeout(function () { try { localStorage.setItem(KEY, JSON.stringify(a)); } catch (e) {} }, 400);
+  }
+  function restaura() {
+    var a = null;
+    try { a = JSON.parse(localStorage.getItem(KEY) || 'null'); } catch (e) {}
+    if (!a) return;
+    Object.keys(refs).forEach(function (id) {
+      var r = refs[id], t = r.def.type;
+      if (t === 'file') return;
+      if (t === 'yesno') {
+        r.radios.forEach(function (i) { i.checked = a[id] === i.value; });
+        if (r.expInput && a[id + '_exp']) r.expInput.value = a[id + '_exp'];
+      } else if (a[id] != null) { if (r.setVal) r.setVal(a[id]); else r.input.value = a[id]; }
+    });
+  }
+
+  // ---- envío
+  function run(fn) {
+    var args = Array.prototype.slice.call(arguments, 1);
+    return fetch(API, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ fn: fn, args: args }) })
+      .then(function (r) { return r.json(); })
+      .then(function (j) { if (!j.ok) throw new Error(j.error || 'Error desconocido'); return j.data; })
+      .catch(function (e) { throw new Error(e && e.message === 'Failed to fetch' ? 'No hay conexión con el servidor. Revisa tu internet e intenta de nuevo.' : (e && e.message ? e.message : String(e))); });
+  }
+  function aBase64(blob) {
+    return new Promise(function (ok, ko) {
+      var fr = new FileReader();
+      fr.onload = function () { ok(String(fr.result).split(',')[1]); };
+      fr.onerror = function () { ko(new Error('No se pudo leer el archivo')); };
+      fr.readAsDataURL(blob);
+    });
+  }
+  function prepara(file) {
+    var esImg = /^image\/(jpeg|png|webp|heic|heif|bmp)/i.test(file.type);
+    if (esImg && window.createImageBitmap) {
+      return createImageBitmap(file).then(function (bmp) {
+        var k = Math.min(1, 2200 / Math.max(bmp.width, bmp.height));
+        var c = DOM.createElement('canvas'); c.width = Math.round(bmp.width * k); c.height = Math.round(bmp.height * k);
+        c.getContext('2d').drawImage(bmp, 0, 0, c.width, c.height);
+        function toBlob(q) { return new Promise(function (ok) { c.toBlob(ok, 'image/jpeg', q); }); }
+        return toBlob(0.88).then(function (b) {
+          return b.size > 2.5 * 1048576 ? toBlob(0.7) : b;
+        }).then(function (b) { return { blob: b, name: file.name.replace(/\.\w+$/, '') + '.jpg', mime: 'image/jpeg' }; });
+      }).catch(function () { return crudo(file); });
+    }
+    return Promise.resolve(crudo(file));
+  }
+  function crudo(file) {
+    if (file.size > 9 * 1048576) throw new Error('"' + file.name + '" pesa más de 9 MB. Toma una foto más ligera o comprímelo.');
+    return { blob: file, name: file.name, mime: file.type || 'application/octet-stream' };
+  }
+
+  function overlay(html) { var o = $('#over'); $('#box').innerHTML = ''; $('#box').appendChild(html); o.classList.add('on'); }
+  function cierra() { $('#over').classList.remove('on'); }
+  // el aviso "Faltan datos" también se cierra tocando el fondo oscuro
+  $('#over').addEventListener('click', function (e) { if (e.target === this && !$('#box').querySelector('.pb')) cierra(); });
+
+  function enviar() {
+    var st = state(), errs = validar(st);
+    pintaErrores(errs);
+    if (errs.length) {
+      var w = refs[errs[0].id].wrap; w.scrollIntoView({ block: 'center' });
+      var t = h('div', {}, [h('h2', { text: 'Faltan datos' }), h('p', { text: 'Revisa los ' + errs.length + ' campo(s) marcados en rojo.' })]);
+      var b = h('button', { class: 'send', type: 'button', text: 'Entendido' }); b.addEventListener('click', cierra); t.appendChild(b);
+      overlay(t); return;
+    }
+    var payload = {};
+    DATA.sections.forEach(function (s) {
+      s.fields.forEach(function (f) {
+        if (!st.vis[f.id] || f.type === 'file') return;
+        payload[f.id] = String(st.a[f.id] || '').trim();
+        if (f.type === 'yesno' && payload[f.id] === 'Sí' && st.a[f.id + '_exp']) payload[f.id + '_exp'] = String(st.a[f.id + '_exp']).trim();
+      });
+    });
+    var envios = [];
+    Object.keys(refs).forEach(function (id) {
+      var r = refs[id];
+      if (r.def.type === 'file' && st.vis[id]) r.files.forEach(function (file) { envios.push({ id: id, label: r.def.label, file: file }); });
+    });
+
+    var barra = h('i'), txt = h('p', { text: 'Enviando tu información…' });
+    overlay(h('div', {}, [h('h2', { text: 'Enviando' }), txt, h('div', { class: 'pb' }, [barra]), h('p', { class: 'help', text: 'No cierres esta ventana.' })]));
+    var total = envios.length + 2, hechos = 0;
+    function avance(m) { hechos++; barra.style.width = Math.round(hechos * 100 / total) + '%'; if (m) txt.textContent = m; }
+
+    run('iniciar', DATA.token, payload).then(function () {
+      avance('Subiendo documentos…');
+      return envios.reduce(function (p, e, i) {
+        return p.then(function () {
+          txt.textContent = 'Subiendo documento ' + (i + 1) + ' de ' + envios.length + '…';
+          return prepara(e.file).then(function (pf) { return aBase64(pf.blob).then(function (b64) {
+            return run('subir', DATA.token, e.id, e.label, pf.name, pf.mime, b64).catch(function () {
+              return run('subir', DATA.token, e.id, e.label, pf.name, pf.mime, b64); // un reintento
+            });
+          }); }).then(function () { avance(); });
+        });
+      }, Promise.resolve());
+    }).then(function () { return run('finalizar', DATA.token); })
+      .then(function (r) { avance(); listo(r.faltan || []); })
+      .catch(function (e) {
+        var b = h('button', { class: 'send', type: 'button', text: 'Volver al formulario' }); b.addEventListener('click', cierra);
+        overlay(h('div', {}, [h('h2', { text: 'No se pudo enviar' }), h('p', { text: String(e.message || e) }), h('p', { class: 'help', text: 'Tus respuestas siguen aquí. Puedes intentar de nuevo.' }), b]));
+      });
+  }
+
+  function listo(faltan) {
+    try { localStorage.removeItem(KEY); } catch (e) {}
+    var kids = [h('h2', { text: faltan.length ? 'Recibimos tu información' : '¡Listo! Recibimos todo' })];
+    if (faltan.length) {
+      kids.push(h('p', { text: 'Aún nos faltan estos documentos:' }));
+      kids.push(h('ul', {}, faltan.map(function (f) { return h('li', { text: f }); })));
+      kids.push(h('p', { text: 'Puedes subirlos ahora o más tarde con este mismo link.' }));
+      var b = h('button', { class: 'send', type: 'button', text: 'Subir documentos' });
+      b.addEventListener('click', function () {
+        cierra();
+        var first = DATA.sections.filter(function (s) { return s.id === 'archivos'; })[0];
+        if (first) secEls[first.id].scrollIntoView({ block: 'start' });
+      });
+      kids.push(b);
+    } else {
+      kids.push(h('p', { text: 'Revisaremos tu información y te avisaremos por WhatsApp si hace falta algo más. Ya puedes cerrar esta ventana.' }));
+    }
+    overlay(h('div', {}, kids));
+  }
+
+  build(); restaura(); sync();
+  $('#send').addEventListener('click', enviar);
+  $('#app').addEventListener('input', sync);
+  $('#app').addEventListener('change', sync);
+}
+</script>
+<script>
+(function () {
+  var tok = (new URLSearchParams(location.search)).get('t') || '';
+  var box = document.getElementById('cargando');
+  function msg(t) { box.textContent = t; }
+  if (!tok) { msg('Este link no es válido. Pide uno nuevo por WhatsApp.'); return; }
+  fetch(API + '?api=1&t=' + encodeURIComponent(tok))
+    .then(function (r) { return r.json(); })
+    .then(function (j) {
+      if (!j.ok) { msg(j.error || 'Este link no es válido. Pide uno nuevo por WhatsApp.'); return; }
+      DATA = j.data; box.hidden = true; arranca();
+    })
+    .catch(function () { msg('No se pudo cargar el formulario. Revisa tu internet y recarga la página.'); });
+})();
+</script>
+</body>
+</html>
