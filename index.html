@@ -521,7 +521,10 @@ function arranca() {
         });
       }, Promise.resolve());
     }).then(function () { return run('finalizar', DATA.token); })
-      .then(function (r) { avance(); listo(r.faltan || []); })
+      .then(function (r) {
+        avance(); listo(r.faltan || []);
+        run('pdfFicha', DATA.token).catch(function () {});   // el PDF se hace aparte, sin hacer esperar al cliente
+      })
       .catch(function (e) {
         var b = h('button', { class: 'send', type: 'button', text: 'Volver al formulario' }); b.addEventListener('click', cierra);
         overlay(h('div', {}, [h('h2', { text: 'No se pudo enviar' }), h('p', { text: String(e.message || e) }), h('p', { class: 'help', text: 'Tus respuestas siguen aquí. Puedes intentar de nuevo.' }), b]));
@@ -652,6 +655,7 @@ function arranca() {
           ok.addEventListener('click', function () { location.reload(); });
           kids.push(ok);
           overlay(h('div', {}, kids));
+          run('pdfFicha', DATA.token).catch(function () {});   // el PDF se hace aparte, sin hacer esperar al cliente
         })
         .catch(function (e) {
           var b = h('button', { class: 'send', type: 'button', text: 'Volver' }); b.addEventListener('click', cierra);
