@@ -39,6 +39,8 @@
   .yn input { position:absolute; inset:0; width:100%; height:100%; margin:0; opacity:0; cursor:pointer; }
   .yn label.on { background:var(--navy); color:#fff; border-color:var(--navy); }
   .exp { margin-top:8px; }
+  .okdoc { color:#2f7a1f; font-weight:500; font-size:13px; }
+  .faltadoc { color:var(--err); font-weight:500; font-size:13px; }
   .redrow { display:grid; gap:8px; padding:10px; border:1px solid var(--line); border-radius:10px; margin-bottom:8px; background:#f8fbfd; }
   .redrow [hidden] { display:none; }
   .redes .mas { background:#fff; color:var(--navy); border:1px solid var(--steel); border-radius:8px; padding:9px 14px; font:inherit; font-size:15px; cursor:pointer; }
@@ -545,6 +547,120 @@ function arranca() {
     }
     overlay(h('div', {}, kids));
   }
+
+  // ---- "Subir más documentos": al reabrir el link de un formulario que ya se envió
+  var ACEPTA = 'image/*,application/pdf,.pdf,.doc,.docx,.odt,.rtf,.txt,.xls,.xlsx,.tif,.tiff,.heic';
+
+  function selector() {
+    var o = { files: [] };
+    var inp = h('input', { type: 'file', accept: ACEPTA });
+    inp.setAttribute('multiple', '');
+    var ul = h('ul', { class: 'fl' });
+    var btn = h('button', { class: 'add', type: 'button', text: 'Elegir archivo(s) o tomar foto' });
+    btn.addEventListener('click', function () { inp.click(); });
+    function pinta() {
+      ul.innerHTML = '';
+      o.files.forEach(function (file, i) {
+        var b = h('button', { type: 'button', text: '✕', 'aria-label': 'Quitar' });
+        b.addEventListener('click', function () { o.files.splice(i, 1); pinta(); });
+        ul.appendChild(h('li', {}, [h('span', { text: file.name }), b]));
+      });
+    }
+    inp.addEventListener('change', function () { o.files = o.files.concat(Array.prototype.slice.call(inp.files)); inp.value = ''; pinta(); });
+    o.el = h('div', { class: 'file' }, [btn, inp, ul]);
+    return o;
+  }
+
+  function construyeMas() {
+    $('.bar').style.display = 'none';
+    $('#sub').textContent = 'Subir más documentos · ' + (DATA.pais === 'Canada' ? 'Canadá' : DATA.pais);
+    $('#chip').textContent = DATA.tipo;
+    var app = $('#app');
+    var card = h('section', { class: 'card' });
+    card.appendChild(h('h2', { text: 'Ya recibimos tu formulario' }));
+    card.appendChild(h('p', { class: 'ayuda', text: 'Aquí puedes subir los documentos que falten o enviarnos otros que quieras agregar. No tienes que llenar nada otra vez.' }));
+    var grupos = [];
+    (DATA.docs || []).forEach(function (d) {
+      var sel = selector();
+      var lab = h('label', { class: 'l', text: d.label + ' ' });
+      lab.appendChild(h('span', { class: d.subido ? 'okdoc' : 'faltadoc', text: d.subido ? '✓ Recibido' : 'Falta' }));
+      var w = h('div', { class: 'f' }, [lab]);
+      if (d.help) w.appendChild(h('div', { class: 'help', text: d.help }));
+      w.appendChild(sel.el);
+      card.appendChild(w);
+      grupos.push({ id: d.id, label: d.label, sel: sel });
+    });
+    // otros documentos
+    var selOtros = selector();
+    var taOtros = h('textarea', { 'aria-label': 'Qué documentos son' });
+    var msgOtros = h('div', { class: 'msg' });
+    var wOtros = h('div', { class: 'f' }, [
+      h('label', { class: 'l', text: 'Otros documentos' }),
+      h('div', { class: 'help', text: 'Opcional: cualquier otro documento que quieras enviarnos. Cuéntanos qué son.' }),
+      selOtros.el, taOtros, msgOtros
+    ]);
+    card.appendChild(wOtros);
+    grupos.push({ id: 'f_otros', label: 'Otros documentos', sel: selOtros });
+    var bt = h('button', { class: 'send', type: 'button', text: 'Enviar documentos' });
+    var corregir = h('p', { class: 'help' }, [DOM.createTextNode('¿Necesitas corregir tus respuestas? '), h('a', { href: '?t=' + encodeURIComponent(DATA.token) + '&completo=1', text: 'Vuelve a llenar el formulario' })]);
+    card.appendChild(h('div', { class: 'f' }, [bt, corregir]));
+    app.appendChild(card);
+
+    bt.addEventListener('click', function () {
+      var envios = [];
+      grupos.forEach(function (g) { g.sel.files.forEach(function (file) { envios.push({ id: g.id, label: g.label, file: file }); }); });
+      var desc = taOtros.value.trim();
+      wOtros.classList.remove('bad'); msgOtros.textContent = '';
+      var avisa = function (t, txt) {
+        var b = h('button', { class: 'send', type: 'button', text: 'Entendido' }); b.addEventListener('click', cierra);
+        overlay(h('div', {}, [h('h2', { text: t }), h('p', { text: txt }), b]));
+      };
+      if (!envios.length && !desc) { avisa('Elige un archivo', 'Elige al menos un archivo para enviar.'); return; }
+      if (selOtros.files.length && !desc) {
+        wOtros.classList.add('bad'); msgOtros.textContent = 'Cuéntanos qué documentos son';
+        wOtros.scrollIntoView({ block: 'center' }); return;
+      }
+      var barra = h('i'), txt = h('p', { text: 'Enviando tus documentos…' });
+      overlay(h('div', {}, [h('h2', { text: 'Enviando' }), txt, h('div', { class: 'pb' }, [barra]), h('p', { class: 'help', text: 'No cierres esta ventana.' })]));
+      var total = envios.length + 2, hechos = 0;
+      function avance() { hechos++; barra.style.width = Math.round(hechos * 100 / total) + '%'; }
+      (desc ? run('masDocumentos', DATA.token, desc) : Promise.resolve()).then(function () {
+        avance();
+        return envios.reduce(function (p, e, i) {
+          return p.then(function () {
+            txt.textContent = 'Subiendo documento ' + (i + 1) + ' de ' + envios.length + '…';
+            return prepara(e.file).then(function (pf) { return aBase64(pf.blob).then(function (b64) {
+              return run('subir', DATA.token, e.id, e.label, pf.name, pf.mime, b64).catch(function () {
+                return run('subir', DATA.token, e.id, e.label, pf.name, pf.mime, b64);
+              });
+            }); }).then(function () { avance(); });
+          });
+        }, Promise.resolve());
+      }).then(function () { return run('finalizar', DATA.token); })
+        .then(function (r) {
+          avance();
+          var faltan = (r && r.faltan) || [];
+          var kids = [h('h2', { text: faltan.length ? 'Recibimos tus documentos' : '¡Listo! Recibimos todo' })];
+          if (faltan.length) {
+            kids.push(h('p', { text: 'Aún nos faltan estos documentos:' }));
+            kids.push(h('ul', {}, faltan.map(function (f) { return h('li', { text: f }); })));
+            kids.push(h('p', { text: 'Puedes subirlos más tarde con este mismo link.' }));
+          } else {
+            kids.push(h('p', { text: 'Ya tenemos todo lo que necesitamos. Te avisaremos por WhatsApp si hace falta algo más. Ya puedes cerrar esta ventana.' }));
+          }
+          var ok = h('button', { class: 'send', type: 'button', text: 'Cerrar' });
+          ok.addEventListener('click', function () { location.reload(); });
+          kids.push(ok);
+          overlay(h('div', {}, kids));
+        })
+        .catch(function (e) {
+          var b = h('button', { class: 'send', type: 'button', text: 'Volver' }); b.addEventListener('click', cierra);
+          overlay(h('div', {}, [h('h2', { text: 'No se pudo enviar' }), h('p', { text: String(e.message || e) }), h('p', { class: 'help', text: 'Puedes intentar de nuevo.' }), b]));
+        });
+    });
+  }
+
+  if (DATA.ya && !(new URLSearchParams(location.search)).get('completo')) { construyeMas(); return; }
 
   build(); restaura(); sync();
   $('#send').addEventListener('click', enviar);
