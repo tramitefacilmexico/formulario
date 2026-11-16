@@ -182,6 +182,7 @@ function arranca() {
     return d;
   }
   var yaSubidos = [];   // archivos que ya se subieron (si el envío falla y se reintenta, no se vuelven a subir)
+  var cur = 0, visSecs = [];   // formulario por pasos: una sección a la vez (cur = posición en las secciones visibles)
   var modoCorregir = false, solo = {};   // corrección: solo se muestran las secciones elegidas (solo[id] = true)
 
   function build() {
@@ -416,10 +417,13 @@ function arranca() {
     var st = state();
     if (refs.nombre && refs.nombre.input) pintaQuien(refs.nombre.input.value || DATA.solicitante);
     var sn = 0;   // numeración 1, 1.1, 1.2…: solo cuenta lo que se ve (igual que en el PDF y la ficha)
+    visSecs = DATA.sections.filter(function (s) { return st.vis['sec:' + s.id]; }).map(function (s) { return s.id; });
+    if (cur > visSecs.length - 1) cur = Math.max(0, visSecs.length - 1);
+    var pasos = !modoCorregir && visSecs.length > 1;
     DATA.sections.forEach(function (s) {
       var secVis = st.vis['sec:' + s.id], fn = 0;
       if (secVis) { sn++; numSecEls[s.id].textContent = sn + '. '; }
-      secEls[s.id].hidden = !secVis || (modoCorregir && !solo[s.id]);
+      secEls[s.id].hidden = !secVis || (modoCorregir && !solo[s.id]) || (pasos && s.id !== visSecs[cur]);
       s.fields.forEach(function (f) {
         var r = refs[f.id], v = st.vis[f.id];
         r.wrap.hidden = !v || r.def.type === 'oculto';
@@ -434,8 +438,13 @@ function arranca() {
       var nSec = Object.keys(solo).filter(function (k) { return solo[k] && st.vis['sec:' + k]; }).length;
       $('#progT').textContent = 'Corrigiendo ' + nSec + (nSec === 1 ? ' sección' : ' secciones');
       $('#progB').parentNode.style.display = 'none';
+      if ($('#atras')) $('#atras').style.display = 'none';
       return;
     }
+    var atras = $('#atras'), intro = DOM.querySelector('.intro');
+    if (atras) atras.style.display = pasos && cur > 0 ? '' : 'none';
+    if (intro) intro.style.display = pasos && cur > 0 ? 'none' : '';
+    $('#send').textContent = !pasos || cur >= visSecs.length - 1 ? 'Enviar' : 'Siguiente →';
     // progreso: campos obligatorios visibles ya llenos
     var tot = 0, ok = 0;
     DATA.sections.forEach(function (s) {
@@ -447,8 +456,8 @@ function arranca() {
       });
     });
     var pct = tot ? Math.round(ok * 100 / tot) : 0;
-    $('#progT').textContent = ok + ' de ' + tot + ' campos obligatorios';
-    $('#progB').style.width = pct + '%';
+    $('#progT').textContent = pasos ? 'Paso ' + (cur + 1) + ' de ' + visSecs.length : ok + ' de ' + tot + ' campos obligatorios';
+    $('#progB').style.width = (pasos ? Math.round((cur + 1) * 100 / visSecs.length) : pct) + '%';
     guardaBorrador(st.a);
   }
 
@@ -589,6 +598,8 @@ function arranca() {
     var st = state(), errs = validar(st);
     pintaErrores(errs);
     if (errs.length) {
+      var k = visSecs.indexOf(secDe[errs[0].id]);
+      if (k >= 0 && k !== cur) { cur = k; sync(); }   // por pasos: se lleva a la persona a la primera sección con errores
       var w = refs[errs[0].id].wrap; w.scrollIntoView({ block: 'center' });
       var t = h('div', {}, [h('h2', { text: 'Faltan datos' }), h('p', { text: 'Revisa los ' + errs.length + ' campo(s) marcados en rojo.' })]);
       var b = h('button', { class: 'send', type: 'button', text: 'Entendido' }); b.addEventListener('click', cierra); t.appendChild(b);
@@ -973,8 +984,20 @@ function arranca() {
 
   build(); restaura();
   if (refs.nombre && refs.nombre.input && !refs.nombre.input.value && DATA.solicitante) refs.nombre.input.value = DATA.solicitante;   // el nombre que ya se capturó al crear el link
+  var btnAtras = h('button', { class: 'ghost', type: 'button', id: 'atras', text: '← Atrás' });
+  $('.bar .in').insertBefore(btnAtras, $('#send'));
+  btnAtras.addEventListener('click', function () { if (cur > 0) { cur--; sync(); window.scrollTo(0, 0); } });
   sync();
-  $('#send').addEventListener('click', enviar);
+  // por pasos: "Siguiente" revisa solo la sección de este paso; en el último paso es "Enviar" y revisa todo
+  function avanza() {
+    if (modoCorregir || visSecs.length < 2 || cur >= visSecs.length - 1) { enviar(); return; }
+    var sid = visSecs[cur];
+    var errs = validar(state()).filter(function (e) { return secDe[e.id] === sid; });
+    pintaErrores(errs);
+    if (errs.length) { refs[errs[0].id].wrap.scrollIntoView({ block: 'center' }); return; }
+    cur++; sync(); window.scrollTo(0, 0);
+  }
+  $('#send').addEventListener('click', avanza);
   $('#app').addEventListener('input', sync);
   $('#app').addEventListener('change', sync);
 }
