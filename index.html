@@ -143,6 +143,7 @@ function arranca() {
     return [].concat(si).every(function (c) {
       if ('any' in c) return c.any.some(function (k) { return cumple(k, x); });
       var v = x[c.f];
+      if ('sinNinguna' in c) return !!v && !/^\s*ningun[ao]?\s*\.?\s*$/i.test(String(v));   // hay un valor y no es "NINGUNA"
       if ('eq' in c) return v === c.eq;
       if ('ne' in c) return v !== c.ne;
       if ('in' in c) return c['in'].indexOf(v) >= 0;
@@ -248,6 +249,24 @@ function arranca() {
       });
       r.list = list;
       wrap.appendChild(h('div', { class: 'file' }, [btn, inp, list]));
+    } else if (f.type === 'mesanio') {
+      // mes y año en dos listas; el campo guarda "AAAA-MM"
+      var mesesM = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+      var opM = function (v, t) { return h('option', { value: v, text: t }); };
+      var sMes = h('select', { 'aria-label': 'Mes' }, [opM('', 'Mes')]), sAnio = h('select', { 'aria-label': 'Año' }, [opM('', 'Año')]);
+      var jM, y1 = new Date().getFullYear();
+      for (jM = 1; jM <= 12; jM++) sMes.appendChild(opM(jM < 10 ? '0' + jM : String(jM), mesesM[jM - 1]));
+      for (jM = y1; jM >= y1 - 60; jM--) sAnio.appendChild(opM(String(jM), String(jM)));
+      r.input = h('input', { id: id, type: 'hidden' });
+      var updM = function () { r.input.value = (sMes.value && sAnio.value) ? sAnio.value + '-' + sMes.value : ''; };
+      [sMes, sAnio].forEach(function (s) { s.addEventListener('change', updM); });
+      r.setVal = function (v) {
+        var pM = String(v || '').match(/^(\d{4})-(\d{2})$/);
+        if (pM) { sAnio.value = pM[1]; sMes.value = pM[2]; } else { sAnio.value = sMes.value = ''; }
+        updM();
+      };
+      wrap.appendChild(h('div', { class: 'dur' }, [sMes, sAnio]));
+      wrap.appendChild(r.input);
     } else if (f.type === 'acepto') {
       // casilla de aceptación con enlace (aviso de privacidad); el campo guarda "Sí" al marcarla
       r.input = h('input', { id: id, type: 'hidden' });
@@ -405,7 +424,7 @@ function arranca() {
         if (!st.vis[f.id] || f.type === 'file') return;
         var v = String(st.a[f.id] || '').trim(), m = '';
         if (f.type === 'redes' && refs[f.id].incomplete) m = 'Completa el usuario de cada red o quita la fila que no uses';
-        else if (!v) { if (f.req) m = f.type === 'redes' ? 'Agrega al menos una red social, o elige "No uso redes sociales"' : f.type === 'acepto' ? 'Marca la casilla para continuar' : f.type === 'select' || f.type === 'yesno' ? 'Selecciona una opción' : 'Este campo es obligatorio'; }
+        else if (!v) { if (f.req) m = f.type === 'redes' ? 'Agrega al menos una red social, o elige "No uso redes sociales"' : f.type === 'acepto' ? 'Marca la casilla para continuar' : f.type === 'mesanio' ? 'Elige el mes y el año' : f.type === 'select' || f.type === 'yesno' ? 'Selecciona una opción' : 'Este campo es obligatorio'; }
         else if (f.type === 'duracion' && !/^[1-9]\d{0,2} (días|semanas|meses)$/.test(v)) m = 'Escribe la cantidad (por ejemplo 7) y elige días, semanas o meses';
         else if (f.type === 'email' && !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v)) m = 'Escribe un correo válido';
         else if (f.type === 'tel' && v.replace(/\D/g, '').length < 8) m = 'Escribe un teléfono válido, con lada';
