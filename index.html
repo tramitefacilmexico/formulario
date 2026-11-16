@@ -160,7 +160,7 @@ function arranca() {
   function textoGrupo() { return DATA.total > 1 ? '← Personas de este grupo' : DATA.total === 1 ? '+ Agregar otra persona al grupo' : 'Ver o agregar personas del grupo'; }
   function pintaQuien(nombre) {
     var q = $('#quien'), t = String(nombre || '').replace(/\s+/g, ' ').trim();
-    q.hidden = !t; q.textContent = t ? 'Para: ' + t.toUpperCase() : '';
+    q.hidden = !t; q.textContent = t ? 'Para: ' + t : '';
   }
   // botón de los avisos finales para volver a la lista del grupo (o agregar más personas)
   function botonGrupo() {
