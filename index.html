@@ -50,6 +50,7 @@
   .redes .mas { background:#fff; color:var(--navy); border:1px solid var(--steel); border-radius:8px; padding:9px 14px; font:inherit; font-size:15px; cursor:pointer; }
   .redes .quita { justify-self:end; border:0; background:none; color:var(--err); font:inherit; font-size:14px; cursor:pointer; padding:2px 0; }
   .f.bad input[type=text], .f.bad input[type=email], .f.bad input[type=tel], .f.bad input[type=date], .f.bad select, .f.bad textarea, .f.bad .yn label { border-color:var(--err); }
+  .f.bad .pick { border-color:var(--err); }
   .msg { color:var(--err); font-size:13px; margin-top:4px; display:none; }
   .f.bad .msg { display:block; }
   .file { border:2px dashed var(--steel); border-radius:10px; padding:12px; background:#f8fbfd; }
@@ -247,6 +248,15 @@ function arranca() {
       });
       r.list = list;
       wrap.appendChild(h('div', { class: 'file' }, [btn, inp, list]));
+    } else if (f.type === 'acepto') {
+      // casilla de aceptación con enlace (aviso de privacidad); el campo guarda "Sí" al marcarla
+      r.input = h('input', { id: id, type: 'hidden' });
+      var cb = h('input', { type: 'checkbox', 'aria-label': f.label });
+      var lk = h('a', { href: f.url, target: '_blank', rel: 'noopener', text: f.linkTexto || f.label });
+      var lbA = h('label', { class: 'pick' }, [cb, h('span', {}, [DOM.createTextNode(f.antes || ''), lk, DOM.createTextNode(f.despues || '')])]);
+      cb.addEventListener('change', function () { r.input.value = cb.checked ? 'Sí' : ''; lbA.classList.toggle('on', cb.checked); });
+      r.setVal = function (v) { cb.checked = v === 'Sí'; r.input.value = cb.checked ? 'Sí' : ''; lbA.classList.toggle('on', cb.checked); };
+      wrap.appendChild(lbA); wrap.appendChild(r.input);
     } else if (f.type === 'redes') {
       // Lista de redes sociales: cada fila = red (lista) + usuario; "Agregar otra red" añade filas.
       var NO_RED = 'No uso redes sociales';
@@ -395,7 +405,7 @@ function arranca() {
         if (!st.vis[f.id] || f.type === 'file') return;
         var v = String(st.a[f.id] || '').trim(), m = '';
         if (f.type === 'redes' && refs[f.id].incomplete) m = 'Completa el usuario de cada red o quita la fila que no uses';
-        else if (!v) { if (f.req) m = f.type === 'redes' ? 'Agrega al menos una red social, o elige "No uso redes sociales"' : f.type === 'select' || f.type === 'yesno' ? 'Selecciona una opción' : 'Este campo es obligatorio'; }
+        else if (!v) { if (f.req) m = f.type === 'redes' ? 'Agrega al menos una red social, o elige "No uso redes sociales"' : f.type === 'acepto' ? 'Marca la casilla para continuar' : f.type === 'select' || f.type === 'yesno' ? 'Selecciona una opción' : 'Este campo es obligatorio'; }
         else if (f.type === 'duracion' && !/^[1-9]\d{0,2} (días|semanas|meses)$/.test(v)) m = 'Escribe la cantidad (por ejemplo 7) y elige días, semanas o meses';
         else if (f.type === 'email' && !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v)) m = 'Escribe un correo válido';
         else if (f.type === 'tel' && v.replace(/\D/g, '').length < 8) m = 'Escribe un teléfono válido, con lada';
