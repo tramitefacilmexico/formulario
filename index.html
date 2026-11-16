@@ -69,6 +69,15 @@
   .box ul { padding-left:20px; }
   .box button { margin-top:8px; }
   .ghost { background:#fff; color:var(--navy); border:1px solid var(--steel); border-radius:10px; font:inherit; padding:11px 18px; cursor:pointer; }
+  .quien { margin:8px 0 0 !important; color:#fff !important; font-weight:700; font-size:18px !important; letter-spacing:.2px; }
+  .quien[hidden] { display:none; }
+  .volver { display:inline-block; margin:0 0 12px; color:var(--steel); font-size:15px; }
+  .persona { display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; padding:12px; border:1px solid var(--line); border-radius:10px; margin:10px 0; background:#fff; }
+  .persona b { display:block; word-break:break-word; }
+  .persona .est { font-size:13px; color:var(--steel); }
+  .persona a { text-decoration:none; }
+  .ok .est { color:#2f7a1f; }
+  .nom { margin:8px 0; }
   .num { color:var(--steel); font-weight:700; margin-right:6px; white-space:nowrap; }
   .pick { display:flex; align-items:center; gap:12px; padding:12px; border:1px solid var(--line); border-radius:10px; margin:10px 0; cursor:pointer; background:#fff; }
   .pick input { width:22px; height:22px; flex:none; margin:0; }
@@ -81,6 +90,7 @@
 <header><div class="in">
   <h1>Trámite Fácil México</h1>
   <p id="sub"></p>
+  <p id="quien" class="quien" hidden></p>
   <span class="chip" id="chip"></span>
 </div></header>
 <main>
@@ -135,6 +145,13 @@ function arranca() {
   var secEls = {}; // id -> card
   var numSecEls = {}; // id de sección -> <span> con su número
   var secDe = {};  // id de campo -> id de su sección
+  var QS = new URLSearchParams(location.search);
+  var esPedido = !!(QS.get('o') && QS.get('k'));   // se abrió con el link que manda Odoo (por pedido)
+  function pedidoUrl(extra) { return '?o=' + encodeURIComponent(QS.get('o')) + '&k=' + encodeURIComponent(QS.get('k')) + '&f=' + encodeURIComponent(QS.get('f') || '') + (extra || ''); }
+  function pintaQuien(nombre) {
+    var q = $('#quien'), t = String(nombre || '').replace(/\s+/g, ' ').trim();
+    q.hidden = !t; q.textContent = t ? 'Para: ' + t.toUpperCase() : '';
+  }
   var yaSubidos = [];   // archivos que ya se subieron (si el envío falla y se reintenta, no se vuelven a subir)
   var modoCorregir = false, solo = {};   // corrección: solo se muestran las secciones elegidas (solo[id] = true)
 
@@ -349,6 +366,7 @@ function arranca() {
 
   function sync() {
     var st = state();
+    if (refs.nombre && refs.nombre.input) pintaQuien(refs.nombre.input.value || DATA.solicitante);
     var sn = 0;   // numeración 1, 1.1, 1.2…: solo cuenta lo que se ve (igual que en el PDF y la ficha)
     DATA.sections.forEach(function (s) {
       var secVis = st.vis['sec:' + s.id], fn = 0;
@@ -830,9 +848,90 @@ function arranca() {
     $('#app').addEventListener('change', sync);
   }
 
+  // ---- link por pedido: pedir los nombres antes de crear los formularios, y lista de personas del pedido
+  function cajasNombres(cont) {
+    var cajas = [];
+    function agrega() {
+      var i = h('input', { type: 'text', placeholder: 'Nombre completo, como aparece en el pasaporte', autocomplete: 'off', 'aria-label': 'Nombre completo' });
+      cont.appendChild(h('div', { class: 'nom' }, [i])); cajas.push(i); return i;
+    }
+    agrega();
+    return { agrega: agrega, valores: function () { return cajas.map(function (c) { return c.value.replace(/\s+/g, ' ').trim(); }).filter(function (v) { return v; }); } };
+  }
+  function pantallaPaso() {
+    DOM.querySelector('.intro').style.display = 'none';
+    $('.bar').style.display = 'none';
+    $('#sub').textContent = 'Formulario para tu trámite de visa · ' + (DATA.pais === 'Canada' ? 'Canadá' : DATA.pais);
+    $('#chip').textContent = DATA.tipo;
+  }
+  function pasoNombres() {
+    pantallaPaso();
+    var card = h('section', { class: 'card' });
+    card.appendChild(h('h2', { text: 'Antes de empezar' }));
+    card.appendChild(h('p', { class: 'ayuda', text: 'Escribe el nombre completo de la persona que va a viajar, como aparece en su pasaporte. El formulario quedará a su nombre.' }));
+    var cont = h('div', {}), ni = cajasNombres(cont);
+    card.appendChild(cont);
+    card.appendChild(h('p', { class: 'help', text: '¿Viaja más gente con este pedido? Agrégala y cada persona tendrá su propio formulario.' }));
+    var mas = h('button', { class: 'ghost', type: 'button', text: '+ Agregar otra persona' });
+    mas.addEventListener('click', function () { ni.agrega().focus(); });
+    var msg = h('div', { class: 'msg' });
+    var go = h('button', { class: 'send', type: 'button', text: 'Continuar' });
+    go.addEventListener('click', function () {
+      var nombres = ni.valores();
+      if (!nombres.length || nombres.some(function (x) { return x.length < 3; })) { msg.textContent = 'Escribe el nombre completo'; msg.style.display = 'block'; return; }
+      msg.style.display = 'none'; go.disabled = true; go.textContent = 'Preparando…';
+      run('crearPersonas', QS.get('o'), QS.get('k'), QS.get('f'), nombres).then(function () {
+        location.href = nombres.length > 1 ? pedidoUrl('&g=1') : pedidoUrl('&n=1');
+      }).catch(function (e) { go.disabled = false; go.textContent = 'Continuar'; msg.textContent = e.message; msg.style.display = 'block'; });
+    });
+    card.appendChild(h('div', { class: 'f' }, [msg, mas, DOM.createTextNode(' '), go]));
+    $('#app').appendChild(card);
+  }
+  function pasoGrupo() {
+    pantallaPaso();
+    var card = h('section', { class: 'card' });
+    card.appendChild(h('h2', { text: 'Personas de este pedido' }));
+    card.appendChild(h('p', { class: 'ayuda', text: 'Elige a la persona para llenar su formulario. Si ya lo envió, puedes revisarlo, corregirlo o subir más documentos.' }));
+    var ESTADOS = { 'Activo': 'Pendiente de llenar', 'Formulario recibido': 'Enviado', 'Faltan archivos': 'Enviado · faltan documentos', 'Completo': 'Completo', 'Cancelado': 'Cancelado' };
+    (DATA.personas || []).forEach(function (p) {
+      var enviado = p.estado !== 'Activo';
+      var b = h('button', { class: enviado ? 'ghost' : 'send', type: 'button', text: enviado ? 'Ver o corregir' : 'Llenar formulario' });
+      b.addEventListener('click', function () { location.href = pedidoUrl('&n=' + p.n); });
+      card.appendChild(h('div', { class: 'persona' + (p.estado === 'Completo' ? ' ok' : '') }, [
+        h('div', {}, [h('b', { text: p.nombre || ('Persona ' + p.n) }), h('span', { class: 'est', text: ESTADOS[p.estado] || p.estado })]), b]));
+    });
+    var card2 = h('section', { class: 'card' });
+    card2.appendChild(h('h2', { text: 'Agregar otra persona' }));
+    card2.appendChild(h('p', { class: 'ayuda', text: 'Escribe su nombre completo, como aparece en el pasaporte. Tendrá su propio formulario.' }));
+    var cont = h('div', {}), ni = cajasNombres(cont);
+    card2.appendChild(cont);
+    var msg = h('div', { class: 'msg' });
+    var mas = h('button', { class: 'ghost', type: 'button', text: '+ Otra más' });
+    mas.addEventListener('click', function () { ni.agrega().focus(); });
+    var go = h('button', { class: 'send', type: 'button', text: 'Agregar' });
+    go.addEventListener('click', function () {
+      var nombres = ni.valores();
+      if (!nombres.length || nombres.some(function (x) { return x.length < 3; })) { msg.textContent = 'Escribe el nombre completo'; msg.style.display = 'block'; return; }
+      msg.style.display = 'none'; go.disabled = true; go.textContent = 'Agregando…';
+      run('crearPersonas', QS.get('o'), QS.get('k'), QS.get('f'), nombres).then(function () { location.href = pedidoUrl('&g=1'); })
+        .catch(function (e) { go.disabled = false; go.textContent = 'Agregar'; msg.textContent = e.message; msg.style.display = 'block'; });
+    });
+    card2.appendChild(h('div', { class: 'f' }, [msg, mas, DOM.createTextNode(' '), go]));
+    $('#app').appendChild(card); $('#app').appendChild(card2);
+  }
+
+  if (DATA.paso === 'nombres') { pasoNombres(); return; }
+  if (DATA.paso === 'grupo') { pasoGrupo(); return; }
+  pintaQuien(DATA.solicitante);
+  if (esPedido) {   // enlace para volver a la lista de personas del pedido (o agregar más)
+    $('main').insertBefore(h('a', { class: 'volver', href: pedidoUrl('&g=1'), text: DATA.total > 1 ? '← Personas de este pedido' : '+ Agregar otra persona a este pedido' }), DOM.querySelector('.intro'));
+  }
+
   if (DATA.ya && !(new URLSearchParams(location.search)).get('completo')) { construyeMas(); return; }
 
-  build(); restaura(); sync();
+  build(); restaura();
+  if (refs.nombre && refs.nombre.input && !refs.nombre.input.value && DATA.solicitante) refs.nombre.input.value = DATA.solicitante;   // el nombre que ya se capturó al crear el link
+  sync();
   $('#send').addEventListener('click', enviar);
   $('#app').addEventListener('input', sync);
   $('#app').addEventListener('change', sync);
@@ -845,7 +944,7 @@ function arranca() {
   // Link por pedido (lo manda Odoo): ?o=S02667&k=clave&f=USA-Nuevo&n=1; el servidor crea o encuentra el registro
   var porPedido = !tok && qs.get('o') && qs.get('k');
   var consulta = porPedido
-    ? 'o=' + encodeURIComponent(qs.get('o')) + '&k=' + encodeURIComponent(qs.get('k')) + '&f=' + encodeURIComponent(qs.get('f') || '') + '&n=' + encodeURIComponent(qs.get('n') || '1')
+    ? 'v=2&o=' + encodeURIComponent(qs.get('o')) + '&k=' + encodeURIComponent(qs.get('k')) + '&f=' + encodeURIComponent(qs.get('f') || '') + (qs.get('n') ? '&n=' + encodeURIComponent(qs.get('n')) : '') + (qs.get('g') ? '&g=1' : '')
     : 't=' + encodeURIComponent(tok);
   var box = document.getElementById('cargando');
   function msg(t) { box.textContent = t; }
@@ -861,8 +960,7 @@ function arranca() {
         clearTimeout(timer);
         if (!j.ok) { msg(j.error || 'Este link no es válido. Pide uno nuevo por WhatsApp.'); return; }
         DATA = j.data; box.hidden = true;
-        // desde aquí el link es el del registro (?t=); el link por pedido ya no se necesita en la barra
-        if (porPedido && window.history && history.replaceState) { try { history.replaceState(null, '', location.pathname + '?t=' + DATA.token); } catch (e) {} }
+        // el link por pedido se queda en la barra: sirve para volver a la lista de personas del pedido
         arranca();
       })
       .catch(function () {
