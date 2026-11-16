@@ -69,10 +69,13 @@
   button.send:disabled { opacity:.6; cursor:default; }
   .over { position:fixed; inset:0; background:rgba(16,48,80,.6); display:none; align-items:center; justify-content:center; padding:16px; z-index:10; }
   .over.on { display:flex; }
-  .box { background:#fff; border-radius:14px; padding:24px; max-width:460px; width:100%; max-height:90vh; overflow-y:auto; border-top:5px solid var(--green); }
+  .box { position:relative; background:#fff; border-radius:14px; padding:24px; max-width:460px; width:100%; max-height:90vh; overflow-y:auto; border-top:5px solid var(--green); }
   .box h2 { margin:0 0 8px; }
   .box ul { padding-left:20px; }
   .box button { margin-top:8px; }
+  .box .xcierra { position:absolute; top:8px; right:10px; width:36px; height:36px; margin:0; padding:0; font-size:26px; line-height:1; background:transparent; color:var(--navy); border:0; border-radius:50%; cursor:pointer; }
+  .box .xcierra:hover { background:#eef2f7; }
+  .fin .cerrar { background:transparent; border:0; color:var(--navy); text-decoration:underline; font-size:15px; padding:10px; }
   .fin button { display:block; width:100%; font-size:17px; padding:16px 20px; margin:10px 0 0; }
   .ghost { background:#fff; color:var(--navy); border:1px solid var(--steel); border-radius:10px; font:inherit; padding:11px 18px; cursor:pointer; }
   .quien { margin:8px 0 0 !important; color:#fff !important; font-weight:700; font-size:18px !important; letter-spacing:.2px; }
@@ -181,7 +184,20 @@ function arranca() {
     b2.addEventListener('click', function () { location.hash = '#corregir'; location.reload(); });
     d.appendChild(b1); d.appendChild(b2);
     var bg = botonGrupo(); if (bg) d.appendChild(bg);
+    var bc = h('button', { class: 'cerrar', type: 'button', text: 'Cerrar formulario' });
+    bc.addEventListener('click', cierraFormulario);
+    d.appendChild(bc);
+    var x = h('button', { class: 'xcierra', type: 'button', text: '×', 'aria-label': 'Cerrar este aviso' });
+    x.addEventListener('click', function () { $('#over').classList.remove('on'); });
+    d.appendChild(x);
     return d;
+  }
+  // "Cerrar formulario": cierra la pestaña; si el navegador no lo permite, deja una pantalla final sin botones para que no se vuelva a guardar
+  function cierraFormulario() {
+    try { window.close(); } catch (e) {}
+    setTimeout(function () {
+      document.body.innerHTML = '<div style="font-family:Roboto,Arial,sans-serif;background:#f2f5f9;color:#103050;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:16px;box-sizing:border-box"><div style="max-width:420px;background:#fff;border-radius:12px;padding:28px;border-top:5px solid #80c040;box-shadow:0 2px 12px rgba(0,0,0,.08)"><h2 style="margin-top:0">Gracias</h2><p>Ya puedes cerrar esta pestaña.</p><p style="font-size:14px;color:#52667c">Si necesitas volver, abre de nuevo el link que te mandamos por WhatsApp.</p></div></div>';
+    }, 300);
   }
   var yaSubidos = [];   // archivos que ya se subieron (si el envío falla y se reintenta, no se vuelven a subir)
   var cur = 0, visSecs = [];   // formulario por pasos: una sección a la vez (cur = posición en las secciones visibles)
