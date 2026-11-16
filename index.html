@@ -72,6 +72,7 @@
   .box h2 { margin:0 0 8px; }
   .box ul { padding-left:20px; }
   .box button { margin-top:8px; }
+  .fin button { display:block; width:100%; font-size:17px; padding:16px 20px; margin:10px 0 0; }
   .ghost { background:#fff; color:var(--navy); border:1px solid var(--steel); border-radius:10px; font:inherit; padding:11px 18px; cursor:pointer; }
   .quien { margin:8px 0 0 !important; color:#fff !important; font-weight:700; font-size:18px !important; letter-spacing:.2px; }
   .quien[hidden] { display:none; }
@@ -165,9 +166,20 @@ function arranca() {
   // botón de los avisos finales para volver a la lista del grupo (o agregar más personas)
   function botonGrupo() {
     if (!esPedido) return null;
-    var b = h('button', { class: 'ghost', type: 'button', text: DATA.total > 1 ? 'Ver las personas del grupo' : DATA.total === 1 ? 'Agregar otra persona al grupo' : 'Ver o agregar personas del grupo' });
+    var b = h('button', { class: 'ghost', type: 'button', text: DATA.total > 1 ? 'Ver mi grupo' : DATA.total === 1 ? 'Agregar otra persona al grupo' : 'Ver o agregar personas del grupo' });
     b.addEventListener('click', function () { location.href = pedidoUrl('&g=1'); });
     return b;
+  }
+  // pantalla final: tres botones grandes (subir documentos, corregir una respuesta, ver el grupo)
+  function botonesFin(faltan) {
+    var d = h('div', { class: 'fin' });
+    var b1 = h('button', { class: faltan.length ? 'send' : 'ghost', type: 'button', text: faltan.length ? 'Subir documentos' : 'Subir más documentos' });
+    b1.addEventListener('click', function () { location.reload(); });
+    var b2 = h('button', { class: 'ghost', type: 'button', text: 'Corregir una respuesta' });
+    b2.addEventListener('click', function () { location.hash = '#corregir'; location.reload(); });
+    d.appendChild(b1); d.appendChild(b2);
+    var bg = botonGrupo(); if (bg) d.appendChild(bg);
+    return d;
   }
   var yaSubidos = [];   // archivos que ya se subieron (si el envío falla y se reintenta, no se vuelven a subir)
   var modoCorregir = false, solo = {};   // corrección: solo se muestran las secciones elegidas (solo[id] = true)
@@ -562,10 +574,7 @@ function arranca() {
         } else {
           kids.push(h('p', { text: 'Revisaremos tu información y te avisaremos por WhatsApp si hace falta algo más. Ya puedes cerrar esta ventana.' }));
         }
-        var ok = h('button', { class: 'send', type: 'button', text: faltan.length ? 'Subir documentos' : 'Cerrar' });
-        ok.addEventListener('click', function () { location.reload(); });
-        kids.push(ok);
-        var bg = botonGrupo(); if (bg) kids.push(h('p', {}, [bg]));
+        kids.push(botonesFin(faltan));
         overlay(h('div', {}, kids));
         run('pdfFicha', DATA.token).catch(function () {});   // el PDF se rehace aparte, sin hacer esperar al cliente
       })
@@ -719,17 +728,10 @@ function arranca() {
       kids.push(h('p', { text: 'Aún nos faltan estos documentos:' }));
       kids.push(h('ul', {}, faltan.map(function (f) { return h('li', { text: f }); })));
       kids.push(h('p', { text: 'Puedes subirlos ahora o más tarde con este mismo link.' }));
-      var b = h('button', { class: 'send', type: 'button', text: 'Subir documentos' });
-      b.addEventListener('click', function () {
-        cierra();
-        var first = DATA.sections.filter(function (s) { return s.id === 'archivos'; })[0];
-        if (first) secEls[first.id].scrollIntoView({ block: 'start' });
-      });
-      kids.push(b);
     } else {
       kids.push(h('p', { text: 'Revisaremos tu información y te avisaremos por WhatsApp si hace falta algo más. Ya puedes cerrar esta ventana.' }));
     }
-    var bg = botonGrupo(); if (bg) kids.push(h('p', {}, [bg]));
+    kids.push(botonesFin(faltan));
     overlay(h('div', {}, kids));
   }
 
@@ -828,10 +830,7 @@ function arranca() {
           } else {
             kids.push(h('p', { text: 'Ya tenemos todo lo que necesitamos. Te avisaremos por WhatsApp si hace falta algo más. Ya puedes cerrar esta ventana.' }));
           }
-          var ok = h('button', { class: 'send', type: 'button', text: 'Cerrar' });
-          ok.addEventListener('click', function () { location.reload(); });
-          kids.push(ok);
-          var bg = botonGrupo(); if (bg) kids.push(h('p', {}, [bg]));
+          kids.push(botonesFin(faltan));
           overlay(h('div', {}, kids));
           run('pdfFicha', DATA.token).catch(function () {});   // el PDF se hace aparte, sin hacer esperar al cliente
         })
@@ -966,7 +965,11 @@ function arranca() {
     $('main').insertBefore(h('a', { class: 'volver', href: pedidoUrl('&g=1'), text: textoGrupo() }), DOM.querySelector('.intro'));
   }
 
-  if (DATA.ya && !(new URLSearchParams(location.search)).get('completo')) { construyeMas(); return; }
+  if (DATA.ya && !(new URLSearchParams(location.search)).get('completo')) {
+    construyeMas();
+    if (location.hash === '#corregir') { try { history.replaceState(null, '', location.pathname + location.search); } catch (e) {} construyeCorregir(); }
+    return;
+  }
 
   build(); restaura();
   if (refs.nombre && refs.nombre.input && !refs.nombre.input.value && DATA.solicitante) refs.nombre.input.value = DATA.solicitante;   // el nombre que ya se capturó al crear el link
