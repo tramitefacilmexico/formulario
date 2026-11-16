@@ -146,8 +146,11 @@ function arranca() {
   var numSecEls = {}; // id de sección -> <span> con su número
   var secDe = {};  // id de campo -> id de su sección
   var QS = new URLSearchParams(location.search);
-  var esPedido = !!(QS.get('o') && QS.get('k'));   // se abrió con el link que manda Odoo (por pedido)
-  function pedidoUrl(extra) { return '?o=' + encodeURIComponent(QS.get('o')) + '&k=' + encodeURIComponent(QS.get('k')) + '&f=' + encodeURIComponent(QS.get('f') || '') + (extra || ''); }
+  // datos del pedido: vienen en el link de Odoo o, si se abrió con el link de la persona (?t=), del servidor
+  var PED = (QS.get('o') && QS.get('k')) ? { o: QS.get('o'), k: QS.get('k'), f: QS.get('f') || '' } : (DATA.pedido || null);
+  var esPedido = !!PED;
+  function pedidoUrl(extra) { return '?o=' + encodeURIComponent(PED.o) + '&k=' + encodeURIComponent(PED.k) + '&f=' + encodeURIComponent(PED.f) + (extra || ''); }
+  function textoGrupo() { return DATA.total > 1 ? '← Personas de este grupo' : DATA.total === 1 ? '+ Agregar otra persona al grupo' : 'Ver o agregar personas del grupo'; }
   function pintaQuien(nombre) {
     var q = $('#quien'), t = String(nombre || '').replace(/\s+/g, ' ').trim();
     q.hidden = !t; q.textContent = t ? 'Para: ' + t.toUpperCase() : '';
@@ -155,7 +158,7 @@ function arranca() {
   // botón de los avisos finales para volver a la lista del grupo (o agregar más personas)
   function botonGrupo() {
     if (!esPedido) return null;
-    var b = h('button', { class: 'ghost', type: 'button', text: DATA.total > 1 ? 'Ver las personas del grupo' : 'Agregar otra persona al grupo' });
+    var b = h('button', { class: 'ghost', type: 'button', text: DATA.total > 1 ? 'Ver las personas del grupo' : DATA.total === 1 ? 'Agregar otra persona al grupo' : 'Ver o agregar personas del grupo' });
     b.addEventListener('click', function () { location.href = pedidoUrl('&g=1'); });
     return b;
   }
@@ -934,7 +937,7 @@ function arranca() {
   if (DATA.paso === 'grupo') { pasoGrupo(); return; }
   pintaQuien(DATA.solicitante);
   if (esPedido) {   // enlace para volver a la lista de personas del pedido (o agregar más)
-    $('main').insertBefore(h('a', { class: 'volver', href: pedidoUrl('&g=1'), text: DATA.total > 1 ? '← Personas de este grupo' : '+ Agregar otra persona al grupo' }), DOM.querySelector('.intro'));
+    $('main').insertBefore(h('a', { class: 'volver', href: pedidoUrl('&g=1'), text: textoGrupo() }), DOM.querySelector('.intro'));
   }
 
   if (DATA.ya && !(new URLSearchParams(location.search)).get('completo')) { construyeMas(); return; }
