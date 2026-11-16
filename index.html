@@ -71,7 +71,7 @@
   .ghost { background:#fff; color:var(--navy); border:1px solid var(--steel); border-radius:10px; font:inherit; padding:11px 18px; cursor:pointer; }
   .quien { margin:8px 0 0 !important; color:#fff !important; font-weight:700; font-size:18px !important; letter-spacing:.2px; }
   .quien[hidden] { display:none; }
-  .volver { display:inline-block; margin:0 0 12px; color:var(--steel); font-size:15px; }
+  .volver { display:block; margin:0 0 12px; padding:11px 14px; background:#fff; border:1px solid var(--steel); border-radius:10px; color:var(--navy); font-weight:500; font-size:15px; text-decoration:none; }
   .persona { display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; padding:12px; border:1px solid var(--line); border-radius:10px; margin:10px 0; background:#fff; }
   .persona b { display:block; word-break:break-word; }
   .persona .est { font-size:13px; color:var(--steel); }
@@ -151,6 +151,13 @@ function arranca() {
   function pintaQuien(nombre) {
     var q = $('#quien'), t = String(nombre || '').replace(/\s+/g, ' ').trim();
     q.hidden = !t; q.textContent = t ? 'Para: ' + t.toUpperCase() : '';
+  }
+  // botón de los avisos finales para volver a la lista del grupo (o agregar más personas)
+  function botonGrupo() {
+    if (!esPedido) return null;
+    var b = h('button', { class: 'ghost', type: 'button', text: DATA.total > 1 ? 'Ver las personas del grupo' : 'Agregar otra persona al grupo' });
+    b.addEventListener('click', function () { location.href = pedidoUrl('&g=1'); });
+    return b;
   }
   var yaSubidos = [];   // archivos que ya se subieron (si el envío falla y se reintenta, no se vuelven a subir)
   var modoCorregir = false, solo = {};   // corrección: solo se muestran las secciones elegidas (solo[id] = true)
@@ -529,6 +536,7 @@ function arranca() {
         var ok = h('button', { class: 'send', type: 'button', text: faltan.length ? 'Subir documentos' : 'Cerrar' });
         ok.addEventListener('click', function () { location.reload(); });
         kids.push(ok);
+        var bg = botonGrupo(); if (bg) kids.push(h('p', {}, [bg]));
         overlay(h('div', {}, kids));
         run('pdfFicha', DATA.token).catch(function () {});   // el PDF se rehace aparte, sin hacer esperar al cliente
       })
@@ -692,6 +700,7 @@ function arranca() {
     } else {
       kids.push(h('p', { text: 'Revisaremos tu información y te avisaremos por WhatsApp si hace falta algo más. Ya puedes cerrar esta ventana.' }));
     }
+    var bg = botonGrupo(); if (bg) kids.push(h('p', {}, [bg]));
     overlay(h('div', {}, kids));
   }
 
@@ -793,6 +802,7 @@ function arranca() {
           var ok = h('button', { class: 'send', type: 'button', text: 'Cerrar' });
           ok.addEventListener('click', function () { location.reload(); });
           kids.push(ok);
+          var bg = botonGrupo(); if (bg) kids.push(h('p', {}, [bg]));
           overlay(h('div', {}, kids));
           run('pdfFicha', DATA.token).catch(function () {});   // el PDF se hace aparte, sin hacer esperar al cliente
         })
@@ -881,7 +891,7 @@ function arranca() {
       if (!nombres.length || nombres.some(function (x) { return x.length < 3; })) { msg.textContent = 'Escribe el nombre completo'; msg.style.display = 'block'; return; }
       msg.style.display = 'none'; go.disabled = true; go.textContent = 'Preparando…';
       run('crearPersonas', QS.get('o'), QS.get('k'), QS.get('f'), nombres).then(function () {
-        location.href = nombres.length > 1 ? pedidoUrl('&g=1') : pedidoUrl('&n=1');
+        location.href = nombres.length > 1 ? pedidoUrl('&g=1') : pedidoUrl('&p=1');
       }).catch(function (e) { go.disabled = false; go.textContent = 'Continuar'; msg.textContent = e.message; msg.style.display = 'block'; });
     });
     card.appendChild(h('div', { class: 'f' }, [msg, mas, DOM.createTextNode(' '), go]));
@@ -890,13 +900,13 @@ function arranca() {
   function pasoGrupo() {
     pantallaPaso();
     var card = h('section', { class: 'card' });
-    card.appendChild(h('h2', { text: 'Personas de este pedido' }));
+    card.appendChild(h('h2', { text: 'Personas de este grupo' }));
     card.appendChild(h('p', { class: 'ayuda', text: 'Elige a la persona para llenar su formulario. Si ya lo envió, puedes revisarlo, corregirlo o subir más documentos.' }));
     var ESTADOS = { 'Activo': 'Pendiente de llenar', 'Formulario recibido': 'Enviado', 'Faltan archivos': 'Enviado · faltan documentos', 'Completo': 'Completo', 'Cancelado': 'Cancelado' };
     (DATA.personas || []).forEach(function (p) {
       var enviado = p.estado !== 'Activo';
       var b = h('button', { class: enviado ? 'ghost' : 'send', type: 'button', text: enviado ? 'Ver o corregir' : 'Llenar formulario' });
-      b.addEventListener('click', function () { location.href = pedidoUrl('&n=' + p.n); });
+      b.addEventListener('click', function () { location.href = pedidoUrl('&p=' + p.n); });
       card.appendChild(h('div', { class: 'persona' + (p.estado === 'Completo' ? ' ok' : '') }, [
         h('div', {}, [h('b', { text: p.nombre || ('Persona ' + p.n) }), h('span', { class: 'est', text: ESTADOS[p.estado] || p.estado })]), b]));
     });
@@ -924,7 +934,7 @@ function arranca() {
   if (DATA.paso === 'grupo') { pasoGrupo(); return; }
   pintaQuien(DATA.solicitante);
   if (esPedido) {   // enlace para volver a la lista de personas del pedido (o agregar más)
-    $('main').insertBefore(h('a', { class: 'volver', href: pedidoUrl('&g=1'), text: DATA.total > 1 ? '← Personas de este pedido' : '+ Agregar otra persona a este pedido' }), DOM.querySelector('.intro'));
+    $('main').insertBefore(h('a', { class: 'volver', href: pedidoUrl('&g=1'), text: DATA.total > 1 ? '← Personas de este grupo' : '+ Agregar otra persona al grupo' }), DOM.querySelector('.intro'));
   }
 
   if (DATA.ya && !(new URLSearchParams(location.search)).get('completo')) { construyeMas(); return; }
@@ -944,7 +954,7 @@ function arranca() {
   // Link por pedido (lo manda Odoo): ?o=S02667&k=clave&f=USA-Nuevo&n=1; el servidor crea o encuentra el registro
   var porPedido = !tok && qs.get('o') && qs.get('k');
   var consulta = porPedido
-    ? 'v=2&o=' + encodeURIComponent(qs.get('o')) + '&k=' + encodeURIComponent(qs.get('k')) + '&f=' + encodeURIComponent(qs.get('f') || '') + (qs.get('n') ? '&n=' + encodeURIComponent(qs.get('n')) : '') + (qs.get('g') ? '&g=1' : '')
+    ? 'v=2&o=' + encodeURIComponent(qs.get('o')) + '&k=' + encodeURIComponent(qs.get('k')) + '&f=' + encodeURIComponent(qs.get('f') || '') + (qs.get('p') ? '&p=' + encodeURIComponent(qs.get('p')) : '') + (qs.get('g') ? '&g=1' : '')
     : 't=' + encodeURIComponent(tok);
   var box = document.getElementById('cargando');
   function msg(t) { box.textContent = t; }
