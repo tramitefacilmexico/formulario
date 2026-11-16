@@ -33,6 +33,7 @@
   textarea { min-height:84px; resize:vertical; }
   .fecha { display:grid; grid-template-columns:0.8fr 1.4fr 1fr; gap:8px; }
   .fecha select { padding:10px 6px; }
+  .dur { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
   input:focus, select:focus, textarea:focus { outline:2px solid var(--steel); border-color:var(--steel); }
   .yn { display:flex; gap:10px; }
   .yn label { position:relative; flex:1; text-align:center; border:1px solid var(--line); border-radius:8px; padding:10px; cursor:pointer; background:#fff; }
@@ -278,6 +279,24 @@ function arranca() {
       r.setVal('');
       cont.appendChild(filas); cont.appendChild(masBtn); cont.appendChild(r.input);
       wrap.appendChild(cont);
+    } else if (f.type === 'duracion') {
+      // Cantidad + unidad (días, semanas o meses); el valor queda como "3 semanas"
+      var dn = h('input', { type: 'text', inputmode: 'numeric', placeholder: 'Cantidad', 'aria-label': 'Cantidad', autocomplete: 'off' });
+      var du = h('select', { 'aria-label': 'Unidad' }, ['días', 'semanas', 'meses'].map(function (o) { return h('option', { value: o, text: o }); }));
+      r.input = h('input', { id: id, type: 'hidden' });
+      var updD = function () {
+        var n = dn.value.replace(/\D/g, '').slice(0, 3);
+        if (dn.value !== n) dn.value = n;
+        r.input.value = n ? n + ' ' + du.value : '';
+      };
+      dn.addEventListener('input', updD); du.addEventListener('change', updD);
+      r.setVal = function (v) {
+        var m = String(v || '').match(/^(\d+)\s+(días|semanas|meses)$/);
+        if (m) { dn.value = m[1]; du.value = m[2]; } else { dn.value = ''; du.value = 'días'; }
+        updD();
+      };
+      wrap.appendChild(h('div', { class: 'dur' }, [dn, du]));
+      wrap.appendChild(r.input);
     } else if (f.type === 'date') {
       // Tres listas (día / mes / año) en lugar del selector nativo de fecha: en algunos celulares
       // el selector nativo dejaba abiertos menús fantasma y bloqueaba los campos de texto.
@@ -358,6 +377,7 @@ function arranca() {
         var v = String(st.a[f.id] || '').trim(), m = '';
         if (f.type === 'redes' && refs[f.id].incomplete) m = 'Completa el usuario de cada red o quita la fila que no uses';
         else if (!v) { if (f.req) m = f.type === 'redes' ? 'Agrega al menos una red social, o elige "No uso redes sociales"' : f.type === 'select' || f.type === 'yesno' ? 'Selecciona una opción' : 'Este campo es obligatorio'; }
+        else if (f.type === 'duracion' && !/^[1-9]\d{0,2} (días|semanas|meses)$/.test(v)) m = 'Escribe la cantidad (por ejemplo 7) y elige días, semanas o meses';
         else if (f.type === 'email' && !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v)) m = 'Escribe un correo válido';
         else if (f.type === 'tel' && v.replace(/\D/g, '').length < 8) m = 'Escribe un teléfono válido, con lada';
         else if (f.type === 'yesno' && f.explain && v === 'Sí' && !String(st.a[f.id + '_exp'] || '').trim()) m = 'Escribe la explicación';
