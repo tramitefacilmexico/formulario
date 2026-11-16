@@ -135,6 +135,7 @@ function arranca() {
   var secEls = {}; // id -> card
   var numSecEls = {}; // id de sección -> <span> con su número
   var secDe = {};  // id de campo -> id de su sección
+  var yaSubidos = [];   // archivos que ya se subieron (si el envío falla y se reintenta, no se vuelven a subir)
   var modoCorregir = false, solo = {};   // corrección: solo se muestran las secciones elegidas (solo[id] = true)
 
   function build() {
@@ -407,8 +408,7 @@ function arranca() {
   }
 
   // ---- envío
-  function run(fn) {
-    var args = Array.prototype.slice.call(arguments, 1);
+  function llama(fn, args) {
     var ctl = window.AbortController ? new AbortController() : null;
     var timer = setTimeout(function () { if (ctl) ctl.abort(); }, 120000);
     return fetch(API, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ fn: fn, args: args }), signal: ctl ? ctl.signal : undefined })
@@ -417,8 +417,24 @@ function arranca() {
       .catch(function (e) {
         clearTimeout(timer);
         var m = e && e.message ? e.message : String(e);
-        throw new Error(/Failed to fetch|aborted|abort/i.test(m) ? 'El servidor tardó demasiado o no hay conexión. Revisa tu internet e intenta de nuevo.' : m);
+        // "otro proceso retuvo el candado": el servidor estaba atendiendo a otras personas; no es culpa del cliente
+        var ocupado = /candado|lock/i.test(m);
+        var err = new Error(ocupado ? 'El sistema estaba atendiendo a otras personas y no pudo recibirte a tiempo.'
+          : /Failed to fetch|aborted|abort/i.test(m) ? 'El servidor tardó demasiado o no hay conexión. Revisa tu internet e intenta de nuevo.' : m);
+        err.ocupado = ocupado;
+        throw err;
       });
+  }
+  // Si el servidor estaba ocupado, se reintenta solo (hasta 3 veces en total): todos los pasos se pueden repetir sin duplicar nada
+  function run(fn) {
+    var args = Array.prototype.slice.call(arguments, 1), n = 0;
+    function intenta() {
+      return llama(fn, args).catch(function (e) {
+        if (!e.ocupado || ++n >= 3) throw e;
+        return new Promise(function (ok) { setTimeout(ok, 3000 * n); }).then(intenta);
+      });
+    }
+    return intenta();
   }
   function aBase64(blob) {
     return new Promise(function (ok, ko) {
@@ -579,19 +595,37 @@ function arranca() {
     var total = envios.length + 2, hechos = 0;
     function avance(m) { hechos++; barra.style.width = Math.round(hechos * 100 / total) + '%'; if (m) txt.textContent = m; }
 
+    var etapa = 'iniciar';
     run('iniciar', DATA.token, payload).then(function () {
+      etapa = 'subir';
       avance('Subiendo documentos…');
       var n = 0;
       return subeTodo(envios, function () { n++; txt.textContent = 'Subiendo documentos (' + n + ' de ' + envios.length + ')…'; avance(); });
-    }).then(function () { return run('finalizar', DATA.token); })
+    }).then(function () { etapa = 'finalizar'; return run('finalizar', DATA.token); })
       .then(function (r) {
         avance(); listo(r.faltan || []);
         run('pdfFicha', DATA.token).catch(function () {});   // el PDF se hace aparte, sin hacer esperar al cliente
       })
       .catch(function (e) {
+        if (etapa === 'finalizar') { confirmaEnvio(e); return; }   // lo importante ya llegó: solo falta confirmar
         var b = h('button', { class: 'send', type: 'button', text: 'Volver al formulario' }); b.addEventListener('click', cierra);
         overlay(h('div', {}, [h('h2', { text: 'No se pudo enviar' }), h('p', { text: String(e.message || e) }), h('p', { class: 'help', text: 'Tus respuestas siguen aquí. Puedes intentar de nuevo.' }), b]));
       });
+  }
+
+  // El último paso falló (p. ej. servidor ocupado) pero la información y los documentos ya llegaron: se repite solo ese paso
+  function confirmaEnvio(e) {
+    var b = h('button', { class: 'send', type: 'button', text: 'Confirmar envío' });
+    overlay(h('div', {}, [h('h2', { text: 'Casi listo' }),
+      h('p', { text: 'Tu información y tus documentos ya llegaron. Solo falta confirmar el envío.' }),
+      h('p', { class: 'help', text: String((e && e.message) || e) }), b]));
+    b.addEventListener('click', function () {
+      b.disabled = true; b.textContent = 'Confirmando…';
+      run('finalizar', DATA.token).then(function (r) {
+        listo(r.faltan || []);
+        run('pdfFicha', DATA.token).catch(function () {});
+      }).catch(function (e2) { confirmaEnvio(e2); });
+    });
   }
 
   // Sube los archivos de a 3 a la vez para tardar menos; los archivos de un mismo documento (p. ej. varias hojas del pasaporte)
@@ -609,11 +643,12 @@ function arranca() {
           activos++;
           colas[siguiente++].reduce(function (p, e) {
             return p.then(function () {
+              if (yaSubidos.indexOf(e.file) >= 0) { if (alTerminarUno) alTerminarUno(); return; }   // ya llegó en un intento anterior: no se duplica
               return prepara(e.file).then(function (pf) { return aBase64(pf.blob).then(function (b64) {
                 return run('subir', DATA.token, e.id, e.label, pf.name, pf.mime, b64).catch(function () {
                   return run('subir', DATA.token, e.id, e.label, pf.name, pf.mime, b64); // un reintento
                 });
-              }); }).then(function () { if (alTerminarUno) alTerminarUno(); });
+              }); }).then(function () { yaSubidos.push(e.file); if (alTerminarUno) alTerminarUno(); });
             });
           }, Promise.resolve()).then(function () { activos--; lanza(); }, function (err) { fallo = true; ko(err); });
         }
