@@ -102,7 +102,7 @@
   </div>
 </div></header>
 <main>
-  <div class="intro">Llena todos los campos. Si no aplica, escribe <b>NINGUNO</b>. Puedes dejar el formulario a medias y volver con este mismo link: lo que escribiste se guarda en este dispositivo (los archivos hay que volver a elegirlos).</div>
+  <div class="intro">Llena todos los campos. Si no aplica, escribe <b>NINGUNO</b>. Puedes dejar el formulario a medias y volver con este mismo link: lo que escribes se guarda solo, incluso para seguir desde otro dispositivo (los archivos hay que volver a elegirlos).</div>
   <div id="cargando" class="intro">Cargando formulario…</div>
   <div id="app"></div>
 </main>
@@ -463,14 +463,37 @@ function arranca() {
 
   // ---- borrador local
   var KEY = 'tfm_borrador_' + DATA.token;
-  var tmr;
+  var tmr, tmrSrv, ultimoSrv = null;
   function guardaBorrador(a) {
     clearTimeout(tmr);
-    tmr = setTimeout(function () { try { localStorage.setItem(KEY, JSON.stringify(a)); } catch (e) {} }, 400);
+    tmr = setTimeout(function () {
+      try { localStorage.setItem(KEY, JSON.stringify(a)); localStorage.setItem(KEY + '_t', String(Date.now())); localStorage.setItem(KEY + '_p', String(cur)); } catch (e) {}
+    }, 400);
+    if (ultimoSrv === null) { ultimoSrv = JSON.stringify(a) + '|' + cur; return; }   // lo que ya había al abrir no se vuelve a mandar
+    clearTimeout(tmrSrv);
+    tmrSrv = setTimeout(enviaBorrador, 10000);
+  }
+  // borrador en el servidor (para seguir desde otro dispositivo): se manda unos segundos después del último cambio, al cambiar de paso y al salir de la página
+  function enviaBorrador(salida) {
+    clearTimeout(tmrSrv);
+    if (modoCorregir || ultimoSrv === null) return;
+    var a = state().a, firma = JSON.stringify(a) + '|' + cur;
+    if (firma === ultimoSrv) return;
+    ultimoSrv = firma;
+    var cuerpo = JSON.stringify({ fn: 'borrador', args: [DATA.token, a, cur] });
+    try {
+      fetch(API, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: cuerpo, keepalive: !!salida && cuerpo.length < 60000 })
+        .then(function (r) { return r.json(); }).then(function (j) { if (!j.ok) ultimoSrv = ''; }).catch(function () { ultimoSrv = ''; });   // si falla, el próximo cambio lo vuelve a mandar
+    } catch (e) {}
   }
   function restaura(previas) {
-    var a = previas || null;   // previas: respuestas ya enviadas (modo corrección); si no, el borrador de este dispositivo
-    if (!a) { try { a = JSON.parse(localStorage.getItem(KEY) || 'null'); } catch (e) {} }
+    var a = previas || null;   // previas: respuestas ya enviadas (modo corrección); si no, el borrador más reciente (de este dispositivo o del servidor)
+    if (!a) {
+      var loc = null, tl = 0, pl = 0;
+      try { loc = JSON.parse(localStorage.getItem(KEY) || 'null'); tl = Number(localStorage.getItem(KEY + '_t') || 0); pl = Number(localStorage.getItem(KEY + '_p') || 0); } catch (e) {}
+      var b = DATA.borrador;
+      if (b && b.a && (!loc || b.t > tl)) { a = b.a; cur = Number(b.paso) || 0; } else { a = loc; cur = pl || 0; }
+    }
     if (!a) return;
     Object.keys(refs).forEach(function (id) {
       var r = refs[id], t = r.def.type;
@@ -733,7 +756,8 @@ function arranca() {
   }
 
   function listo(faltan) {
-    try { localStorage.removeItem(KEY); } catch (e) {}
+    clearTimeout(tmrSrv); ultimoSrv = null;
+    try { localStorage.removeItem(KEY); localStorage.removeItem(KEY + '_t'); localStorage.removeItem(KEY + '_p'); } catch (e) {}
     var kids = [h('h2', { text: faltan.length ? 'Recibimos tu información' : '¡Listo! Recibimos todo' })];
     if (faltan.length) {
       kids.push(h('p', { text: 'Aún nos faltan estos documentos:' }));
@@ -986,7 +1010,8 @@ function arranca() {
   if (refs.nombre && refs.nombre.input && !refs.nombre.input.value && DATA.solicitante) refs.nombre.input.value = DATA.solicitante;   // el nombre que ya se capturó al crear el link
   var btnAtras = h('button', { class: 'ghost', type: 'button', id: 'atras', text: '← Atrás' });
   $('.bar .in').insertBefore(btnAtras, $('#send'));
-  btnAtras.addEventListener('click', function () { if (cur > 0) { cur--; sync(); window.scrollTo(0, 0); } });
+  btnAtras.addEventListener('click', function () { if (cur > 0) { cur--; sync(); window.scrollTo(0, 0); enviaBorrador(); } });
+  document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'hidden') enviaBorrador(true); });
   sync();
   // por pasos: "Siguiente" revisa solo la sección de este paso; en el último paso es "Enviar" y revisa todo
   function avanza() {
@@ -995,7 +1020,7 @@ function arranca() {
     var errs = validar(state()).filter(function (e) { return secDe[e.id] === sid; });
     pintaErrores(errs);
     if (errs.length) { refs[errs[0].id].wrap.scrollIntoView({ block: 'center' }); return; }
-    cur++; sync(); window.scrollTo(0, 0);
+    cur++; sync(); window.scrollTo(0, 0); enviaBorrador();
   }
   $('#send').addEventListener('click', avanza);
   $('#app').addEventListener('input', sync);
