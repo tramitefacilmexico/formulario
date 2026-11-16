@@ -188,7 +188,7 @@ function arranca() {
   var modoCorregir = false, solo = {};   // corrección: solo se muestran las secciones elegidas (solo[id] = true)
 
   function build() {
-    $('#sub').textContent = 'Formulario para tu trámite de visa · ' + (DATA.pais === 'Canada' ? 'Canadá' : DATA.pais);
+    $('#sub').textContent = DATA.subtitulo || ('Formulario para tu trámite de visa · ' + (DATA.pais === 'Canada' ? 'Canadá' : DATA.pais));
     $('#chip').textContent = DATA.tipo;
     var app = $('#app');
     DATA.sections.forEach(function (s) {
@@ -348,7 +348,7 @@ function arranca() {
     } else if (f.type === 'date') {
       // Tres listas (día / mes / año) en lugar del selector nativo de fecha: en algunos celulares
       // el selector nativo dejaba abiertos menús fantasma y bloqueaba los campos de texto.
-      var fut = /llegada|salida/i.test(f.id), hoy = new Date(), y0 = hoy.getFullYear();
+      var fut = /llegada|salida|vencimiento/i.test(f.id), hoy = new Date(), y0 = hoy.getFullYear();
       var meses = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
       var op = function (v, t) { return h('option', { value: v, text: t }); };
       var sd = h('select', { 'aria-label': 'Día' }, [op('', 'Día')]), sm = h('select', { 'aria-label': 'Mes' }, [op('', 'Mes')]), sa = h('select', { 'aria-label': 'Año' }, [op('', 'Año')]);
@@ -444,7 +444,7 @@ function arranca() {
 
   function sync() {
     var st = state();
-    if (refs.nombre && refs.nombre.input) pintaQuien(refs.nombre.input.value || DATA.solicitante);
+    if (refs.nombre && refs.nombre.input) pintaQuien(((refs.nombre.input.value || '') + ' ' + (refs.apellidos && refs.apellidos.input ? refs.apellidos.input.value : '')).trim() || DATA.solicitante);
     var sn = 0;   // numeración 1, 1.1, 1.2…: solo cuenta lo que se ve (igual que en el PDF y la ficha)
     visSecs = DATA.sections.filter(function (s) { return st.vis['sec:' + s.id]; }).map(function (s) { return s.id; });
     if (cur > visSecs.length - 1) cur = Math.max(0, visSecs.length - 1);
@@ -824,7 +824,7 @@ function arranca() {
 
   function construyeMas() {
     $('.bar').style.display = 'none';
-    $('#sub').textContent = 'Subir más documentos · ' + (DATA.pais === 'Canada' ? 'Canadá' : DATA.pais);
+    $('#sub').textContent = 'Subir más documentos · ' + (DATA.paisNombre || (DATA.pais === 'Canada' ? 'Canadá' : DATA.pais));
     $('#chip').textContent = DATA.tipo;
     var app = $('#app');
     var card = h('section', { class: 'card' });
@@ -910,7 +910,7 @@ function arranca() {
     modoCorregir = true;
     DOM.querySelector('.intro').style.display = 'none';
     $('#app').innerHTML = '';
-    $('#sub').textContent = 'Corregir mis respuestas · ' + (DATA.pais === 'Canada' ? 'Canadá' : DATA.pais);
+    $('#sub').textContent = 'Corregir mis respuestas · ' + (DATA.paisNombre || (DATA.pais === 'Canada' ? 'Canadá' : DATA.pais));
     build(); restaura(DATA.resp || {}); sync();
     window.scrollTo(0, 0);
     var st = state();
@@ -963,7 +963,7 @@ function arranca() {
   function pantallaPaso() {
     DOM.querySelector('.intro').style.display = 'none';
     $('.bar').style.display = 'none';
-    $('#sub').textContent = 'Formulario para tu trámite de visa · ' + (DATA.pais === 'Canada' ? 'Canadá' : DATA.pais);
+    $('#sub').textContent = DATA.subtitulo || ('Formulario para tu trámite de visa · ' + (DATA.pais === 'Canada' ? 'Canadá' : DATA.pais));
     $('#chip').textContent = DATA.tipo;
   }
   function pasoNombres() {
@@ -1036,7 +1036,7 @@ function arranca() {
   }
 
   build(); restaura();
-  if (refs.nombre && refs.nombre.input && !refs.nombre.input.value && DATA.solicitante) refs.nombre.input.value = DATA.solicitante;   // el nombre que ya se capturó al crear el link
+  if (refs.nombre && refs.nombre.input && !refs.apellidos && !refs.nombre.input.value && DATA.solicitante) refs.nombre.input.value = DATA.solicitante;   // el nombre que ya se capturó al crear el link
   var btnAtras = h('button', { class: 'ghost', type: 'button', id: 'atras', text: '← Atrás' });
   $('.bar .in').insertBefore(btnAtras, $('#send'));
   btnAtras.addEventListener('click', function () { if (cur > 0) { cur--; sync(); window.scrollTo(0, 0); enviaBorrador(); } });
