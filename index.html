@@ -36,6 +36,7 @@
   .tip { background:#eef4f9; border-left:4px solid var(--green); border-radius:6px; padding:9px 12px; margin:4px 0 8px; font-size:14px; color:var(--navy); }
   .tip[hidden] { display:none; }
   .tip a { color:var(--steel); font-weight:500; }
+  .tip img { display:block; max-width:100%; height:auto; margin:8px 0 4px; border:1px solid var(--line); border-radius:6px; }
   input[type=text], input[type=email], input[type=tel], input[type=date], select, textarea {
     width:100%; font:inherit; font-size:16px; color:var(--navy); background:#fff; border:1px solid var(--line); border-radius:8px; padding:10px 12px; }
   textarea { min-height:84px; resize:vertical; }
@@ -310,17 +311,22 @@ function arranca() {
     [/_correo$/, 'Escríbelo con cuidado, sin espacios.'],
     [/_nac$/, 'Fecha de nacimiento, tal como viene en su acta o identificación.']
   ];
+  // El formulario de pasaporte lleva la pregunta «pas_tipo»; ahí la CURP debe ser certificada y se muestra un ejemplo en imagen
+  function esPasaporte() { return !!(DATA && DATA.sections && DATA.sections.some(function (s) { return s.fields.some(function (f) { return f.id === 'pas_tipo'; }); })); }
+  function tipImgDe(f) { return f.id === 'curp' && esPasaporte() ? 'curp-certificada.jpg' : ''; }
   function tipDe(f) {
     var id = String(f.id || '');
+    if (id === 'curp' && esPasaporte()) return 'Debe ser la CURP certificada, es decir, verificada con el Registro Civil, como la de esta imagen.';
     if (VERDAD_IDS.indexOf(id) >= 0) return VERDAD;
     if (TIPS[id]) return TIPS[id];
     if (f.type === 'file' || f.type === 'oculto' || f.type === 'acepto' || f.type === 'redes') return '';
     for (var i = 0; i < TIPS_SUF.length; i++) if (TIPS_SUF[i][0].test(id)) return TIPS_SUF[i][1];
     return '';
   }
-  function tipPanel(txt) {
+  function tipPanel(txt, img) {
     var p = h('div', { class: 'tip', hidden: '' });
     p.appendChild(DOM.createTextNode(txt + ' '));
+    if (img) p.appendChild(h('img', { src: img, alt: 'Ejemplo de CURP certificada: verificada con el Registro Civil', loading: 'lazy' }));
     p.appendChild(h('a', { href: 'https://wa.me/525526906088?text=' + encodeURIComponent('Hola, tengo una duda con mi formulario'), target: '_blank', rel: 'noopener', text: '¿Sigues con dudas? Escríbenos por WhatsApp.' }));
     return p;
   }
@@ -345,7 +351,7 @@ function arranca() {
     wrap.appendChild(lab);
     var tipTxt = tipDe(f);
     if (tipTxt) {   // botón "?" que abre/cierra una explicación corta de cómo responder
-      var tipEl = tipPanel(tipTxt);
+      var tipEl = tipPanel(tipTxt, tipImgDe(f));
       var tipBtn = h('button', { type: 'button', class: 'tipbtn', 'aria-label': 'Ayuda para esta pregunta', 'aria-expanded': 'false', text: '?' });
       tipBtn.addEventListener('click', function (ev) {
         ev.preventDefault(); ev.stopPropagation();
