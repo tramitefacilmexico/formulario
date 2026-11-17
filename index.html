@@ -31,6 +31,11 @@
   label.l { display:block; font-weight:500; margin-bottom:4px; }
   .req { color:var(--err); }
   .help { color:var(--steel); font-size:13px; margin:2px 0 4px; }
+  .tipbtn { display:inline-flex; align-items:center; justify-content:center; width:22px; height:22px; margin-left:6px; padding:0; vertical-align:middle; border:1.5px solid var(--steel); border-radius:50%; background:#fff; color:var(--steel); font:700 13px/1 Roboto,Arial,sans-serif; cursor:pointer; }
+  .tipbtn[aria-expanded=true] { background:var(--steel); color:#fff; }
+  .tip { background:#eef4f9; border-left:4px solid var(--green); border-radius:6px; padding:9px 12px; margin:4px 0 8px; font-size:14px; color:var(--navy); }
+  .tip[hidden] { display:none; }
+  .tip a { color:var(--steel); font-weight:500; }
   input[type=text], input[type=email], input[type=tel], input[type=date], select, textarea {
     width:100%; font:inherit; font-size:16px; color:var(--navy); background:#fff; border:1px solid var(--line); border-radius:8px; padding:10px 12px; }
   textarea { min-height:84px; resize:vertical; }
@@ -218,6 +223,108 @@ function arranca() {
     });
   }
 
+  // Ayudas "?" por pregunta: explicación corta de cómo responder. Se buscan por id exacto o por terminación del id.
+  var VERDAD = 'Responde con total sinceridad: dar información falsa o no decir algo puede hacer que te nieguen el trámite. Si tienes duda de cómo contestar, escríbenos antes por WhatsApp.';
+  var TIPS = {
+    nombre: 'Escríbelo tal como aparece en tu pasaporte: todos tus nombres y apellidos completos, sin apodos ni abreviaturas.',
+    apellidos: 'Escribe tus dos apellidos tal como aparecen en tu pasaporte.',
+    pasaporte: 'Es el número que está en la hoja de datos de tu pasaporte, junto a tu foto. Normalmente es una letra seguida de números. Escríbelo sin espacios.',
+    pasaporte_emision: 'Aparece en la hoja de datos de tu pasaporte como fecha de expedición.',
+    pasaporte_vencimiento: 'Aparece en la hoja de datos de tu pasaporte como fecha de vencimiento.',
+    fechaNac: 'Tu fecha de nacimiento, tal como aparece en tu pasaporte.',
+    lugarNac: 'Ciudad, estado y país donde naciste, como dice tu acta de nacimiento.',
+    curp: 'Son 18 letras y números. Si no la recuerdas, puedes consultarla gratis en gob.mx/curp con tus datos.',
+    ter_curp: 'Son 18 letras y números. Si no la recuerdas, puedes consultarla gratis en gob.mx/curp con los datos de esa persona.',
+    tutor_curp: 'Son 18 letras y números. Si no la recuerdas, puedes consultarla gratis en gob.mx/curp con los datos de esa persona.',
+    rfc: 'Aparece en tu constancia de situación fiscal del SAT. Tiene 13 letras y números en personas físicas.',
+    correo: 'Escribe un correo que revises seguido: ahí te mandaremos avisos de tu trámite. Revisa que esté bien escrito, sin espacios.',
+    telCel: 'Escribe un número donde te podamos localizar, a 10 dígitos con tu lada.',
+    telCasa: 'Si no tienes teléfono de casa, escribe tu celular.',
+    telTrabajo: 'Con lada. Si no trabajas, escribe NINGUNO.',
+    estadoCivil: 'Elige tu situación actual. Si vives en pareja sin estar casado(a), elige "Unión libre". Si estás separado(a) pero no divorciado(a) legalmente, elige "Casado/a".',
+    sexo: 'Elige como aparece en tu pasaporte.',
+    estatura: 'Si no la sabes exacta, escribe una aproximada en centímetros.',
+    colorOjos: 'Elige o escribe el color que más se parezca al de tus ojos.',
+    marcas: 'Cicatrices, tatuajes o lunares muy visibles. Si no tienes, escribe NINGUNA.',
+    religion: 'Escribe la religión que practicas. Si no practicas ninguna, escribe NINGUNA.',
+    nacionalidad: 'Tu nacionalidad, como aparece en tu pasaporte. Si eres mexicano(a), escribe Mexicana.',
+    otroNombre: 'Cuenta como "otro nombre" un apodo, un nombre de soltera o un nombre que hayas usado antes. Si nunca has usado otro, contesta No.',
+    otraNac: 'Contesta Sí solo si tienes la nacionalidad o un pasaporte de otro país además del mexicano.',
+    otraNacionalidad: 'Contesta Sí solo si tienes la nacionalidad o un pasaporte de otro país además del mexicano.',
+    ocupacion: 'Elige la opción que describe lo que haces hoy. Si estás jubilado(a), elige esa opción y después te pediremos tu último empleo.',
+    expLaboral: 'Contesta Sí si trabajaste en algún momento de los últimos 10 años, aunque hoy no trabajes.',
+    emp_nombre: 'El nombre de la empresa o negocio donde trabajas hoy. Si trabajas por tu cuenta, escribe el nombre de tu negocio o tu propio nombre.',
+    emp_puesto: 'Tu cargo o puesto actual, como lo dice tu empleo.',
+    emp_actividades: 'Cuéntanos con tus palabras, en una o dos frases, qué haces en un día normal de trabajo.',
+    emp_sueldo: 'Tu ingreso mensual aproximado. Una cantidad aproximada está bien.',
+    jub_sueldo: 'Lo que ganabas al mes en ese trabajo, de forma aproximada.',
+    ingreso: 'La suma aproximada de lo que ganas en un año. Una cifra aproximada es suficiente.',
+    emp_jefe: 'Es la persona a la que le reportas directamente. Si trabajas por tu cuenta, escribe tu propio nombre.',
+    jub_jefe: 'Es la persona a la que le reportabas directamente en ese trabajo.',
+    ant_jefe: 'Es la persona a la que le reportabas directamente en ese trabajo.',
+    emp_menos: 'Contesta Sí si llevas menos de 10 años en el mismo empleo; así te pediremos también los empleos anteriores.',
+    esEstudiante: 'Contesta Sí si hoy estás inscrito(a) en una escuela, aunque estés de vacaciones.',
+    quienPaga: 'Elige quién cubre los gastos del viaje. Si paga otra persona u organización, después te pediremos sus datos.',
+    dinero: 'Una cantidad aproximada que calculas gastar en todo el viaje. No necesitas comprobarla en este momento.',
+    gastos: 'Una cantidad aproximada que calculas gastar. No necesitas comprobarla en este momento.',
+    fechaViaje: 'Si aún no tienes fecha definida, escribe la más aproximada. Después se puede ajustar.',
+    motivo: 'Elige la razón principal de tu viaje.',
+    motivoViaje: 'Cuéntalo con tus palabras, en una o dos frases: por ejemplo, vacaciones, visita a familiares o negocios.',
+    queHaras: 'Cuéntalo con tus palabras, en una o dos frases: por ejemplo, turismo o visita a familiares.',
+    lugaresVisitar: 'Escribe las ciudades o sitios que planeas visitar. Con los principales es suficiente.',
+    acompanantes: 'Escribe el nombre completo de cada persona con la que viajas y qué es de ti (esposo(a), hijo(a), amigo(a), etc.).',
+    hotel_nombre: 'Si aún no reservas, escribe el hotel o lugar donde piensas hospedarte. Si te quedarás con alguien, escribe su nombre.',
+    hotel_domicilio: 'La dirección de ese hotel o del lugar donde te vas a hospedar.',
+    hotel_tel: 'El teléfono del hotel, o de la persona que te hospeda. Si no lo tienes, escribe NO LO TENGO.',
+    domicilioUSA: 'Si aún no sabes dónde llegarás, escribe la dirección de tu primer hotel o de la persona que te recibe.',
+    domicilioCanada: 'Si aún no sabes dónde llegarás, escribe la dirección de tu primer hotel o de la persona que te recibe.',
+    domicilioChina: 'Si aún no sabes dónde llegarás, escribe la dirección de tu primer hotel o de la persona que te recibe.',
+    domicilioRusia: 'Si aún no sabes dónde llegarás, escribe la dirección de tu primer hotel o de la persona que te recibe.',
+    contactoUSA: 'Es una persona o empresa en ese país a la que visitas o que te espera. Si no conoces a nadie, escribe el hotel donde te hospedarás.',
+    contactoCanada: 'Es una persona o empresa en ese país a la que visitas o que te espera. Si no conoces a nadie, escribe el hotel donde te hospedarás.',
+    paisesViajados: 'Escribe los países, de preferencia con el año aproximado de cada viaje.',
+    tuvoVisa: 'Cuenta cualquier visa que hayas tenido, aunque ya esté vencida o la hayas perdido.',
+    negadaVisa: 'Si alguna vez te la negaron, aunque después te la hayan dado, contesta Sí y explícalo brevemente.',
+    docTipo: 'Elige el documento que perdiste o te robaron.',
+    hechos_fecha: 'La fecha en que ocurrió, aunque sea aproximada.',
+    hechos_lugar: 'La ciudad y el lugar donde ocurrió, lo más preciso que recuerdes.',
+    hechos_narracion: 'Cuéntalo con tus palabras: qué pasó, dónde y cuándo. No tiene que ser largo.',
+    notas: 'Cualquier dato que creas importante y que no te hayamos preguntado. Si no hay nada, puedes dejarlo vacío.',
+    f_foto: 'Foto reciente, de frente, con fondo blanco, buena luz, sin lentes, gorra ni filtros.',
+    f_pasaporte: 'Foto o escaneo de la hoja con tus datos, completa y legible, sin reflejos ni dedos encima.',
+    f_pasAnterior: 'Foto o escaneo de la hoja con tus datos, completa y legible.',
+    f_ident: 'Foto de tu identificación vigente por los dos lados, que se lea bien.',
+    f_ine: 'Foto de tu INE vigente por los dos lados, que se lea bien.',
+    f_acta: 'Si no la tienes a la mano, puedes descargarla en gob.mx/ActaNacimiento con tu CURP.',
+    f_curp: 'Si no la tienes a la mano, puedes descargarla gratis en gob.mx/curp.',
+    f_comprobantes: 'Sube los más recientes que tengas.',
+    f_estadosCuenta: 'Sube los más recientes que tengas. Si el banco te los da en PDF, puedes subirlos tal cual.'
+  };
+  var VERDAD_IDS = ['antecedentes', 'arrestado', 'condenado', 'procesado', 'detenido', 'delitos1', 'delitos2', 'deportado', 'infoFalsa', 'crimenesGuerra', 'conflictos', 'asilo', 'excedioEstancia', 'leyesInmigracion', 'leyesAduana', 'visaCancelada', 'negadaEntrada', 'negadaEntradaSA', 'entroIlegal', 'entroSinPermiso', 'riesgoSalud', 'opiniones', 'dispensa', 'actividadesIlegales', 'militar', 'armas', 'formacionEspecial', 'paisesRestringidos', 'rechazadaVisa', 'rechazadaEvisa', 'excedioSA', 'negadaVisaRusia', 'buscaEmpleoUSA'];
+  var TIPS_SUF = [
+    [/(^|_)domicilio$|^domicilio[A-Z]?[a-z]*$/, 'Escribe calle y número, colonia, municipio o alcaldía, ciudad, estado y código postal. Si no sabes tu código postal, búscalo en el buscador de Correos de México.'],
+    [/_direccion$/, 'Escribe la dirección completa: calle y número, colonia, ciudad, estado y código postal.'],
+    [/(^|_)tel$|_tel[A-Z]|^tel[A-Z]/, 'Escríbelo con lada: 10 dígitos si es de México. Si es de otro país, agrega el código del país (por ejemplo +1 para USA).'],
+    [/(_inicio|_fin)$/, 'Elige el mes y el año. Si no recuerdas el mes exacto, pon el más aproximado.'],
+    [/_actividades$/, 'Cuéntanos con tus palabras, en una o dos frases, qué hacías en un día normal de trabajo.'],
+    [/_correo$/, 'Escríbelo con cuidado, sin espacios.'],
+    [/_nac$/, 'Fecha de nacimiento, tal como viene en su acta o identificación.']
+  ];
+  function tipDe(f) {
+    var id = String(f.id || '');
+    if (VERDAD_IDS.indexOf(id) >= 0) return VERDAD;
+    if (TIPS[id]) return TIPS[id];
+    if (f.type === 'file' || f.type === 'oculto' || f.type === 'acepto' || f.type === 'redes') return '';
+    for (var i = 0; i < TIPS_SUF.length; i++) if (TIPS_SUF[i][0].test(id)) return TIPS_SUF[i][1];
+    return '';
+  }
+  function tipPanel(txt) {
+    var p = h('div', { class: 'tip', hidden: '' });
+    p.appendChild(DOM.createTextNode(txt + ' '));
+    p.appendChild(h('a', { href: 'https://wa.me/525526906088?text=' + encodeURIComponent('Hola, tengo una duda con mi formulario'), target: '_blank', rel: 'noopener', text: '¿Sigues con dudas? Escríbenos por WhatsApp.' }));
+    return p;
+  }
+
   function buildField(f) {
     if (f.type === 'oculto') {   // no se ve: guarda los documentos que no subió y por qué
       var wo = h('div', { class: 'f', hidden: '' });
@@ -230,6 +337,18 @@ function arranca() {
     if (f.req && f.type !== 'file') lab.appendChild(h('span', { class: 'req', text: '*' }));
     var numEl = h('span', { class: 'num' }); lab.insertBefore(numEl, lab.firstChild);
     wrap.appendChild(lab);
+    var tipTxt = tipDe(f);
+    if (tipTxt) {   // botón "?" que abre/cierra una explicación corta de cómo responder
+      var tipEl = tipPanel(tipTxt);
+      var tipBtn = h('button', { type: 'button', class: 'tipbtn', 'aria-label': 'Ayuda para esta pregunta', 'aria-expanded': 'false', text: '?' });
+      tipBtn.addEventListener('click', function (ev) {
+        ev.preventDefault(); ev.stopPropagation();
+        var abre = tipEl.hidden;
+        tipEl.hidden = !abre; tipBtn.setAttribute('aria-expanded', abre ? 'true' : 'false');
+      });
+      lab.appendChild(tipBtn);
+      wrap.appendChild(tipEl);
+    }
     if (f.help) wrap.appendChild(h('div', { class: 'help', text: f.help }));
     var r = { def: f, wrap: wrap, numEl: numEl };
     var id = 'c_' + f.id;
