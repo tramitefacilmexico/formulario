@@ -36,6 +36,9 @@
   .tip { background:#eef4f9; border-left:4px solid var(--green); border-radius:6px; padding:9px 12px; margin:4px 0 8px; font-size:14px; color:var(--navy); }
   .tip[hidden] { display:none; }
   .tip a { color:var(--steel); font-weight:500; }
+  .ptitulo { margin:18px 0 6px; }
+  .ptitulo.linea { margin-top:26px; padding-top:18px; border-top:2px solid var(--line); }
+  .ptitulo h3 { margin:0; font-size:16px; color:var(--navy); }
   .tip img { display:block; max-width:100%; height:auto; margin:8px 0 4px; border:1px solid var(--line); border-radius:6px; }
   input[type=text], input[type=email], input[type=tel], input[type=date], select, textarea {
     width:100%; font:inherit; font-size:16px; color:var(--navy); background:#fff; border:1px solid var(--line); border-radius:8px; padding:10px 12px; }
@@ -337,6 +340,12 @@ function arranca() {
       var ro = { def: f, wrap: wo, input: h('textarea', { id: 'c_' + f.id, hidden: '' }) };
       wo.appendChild(ro.input); refs[f.id] = ro;
       return wo;
+    }
+    if (f.type === 'titulo') {   // título dentro de una sección (con línea arriba si f.linea); no es pregunta y no guarda respuesta
+      var wti = h('div', { class: 'f ptitulo' + (f.linea ? ' linea' : ''), hidden: '' }, [h('h3', { text: f.label })]);
+      var rti = { def: f, wrap: wti, input: h('textarea', { id: 'c_' + f.id, hidden: '' }) };
+      wti.appendChild(rti.input); refs[f.id] = rti;
+      return wti;
     }
     if (f.type === 'aviso') {   // texto informativo que se muestra según una condición; no es pregunta y no guarda respuesta
       var wav = h('div', { class: 'f', hidden: '' }, [h('div', { class: 'tip', text: f.label })]);
@@ -764,7 +773,7 @@ function arranca() {
       if (!solo[s.id] || !st.vis['sec:' + s.id]) return;
       secs.push(s.id);
       s.fields.forEach(function (f) {
-        if (!st.vis[f.id] || f.type === 'file' || f.type === 'oculto' || f.type === 'aviso') return;
+        if (!st.vis[f.id] || f.type === 'file' || f.type === 'oculto' || f.type === 'aviso' || f.type === 'titulo') return;
         payload[f.id] = String(st.a[f.id] || '').trim();
         if (f.type === 'yesno' && payload[f.id] === 'Sí' && st.a[f.id + '_exp']) payload[f.id + '_exp'] = String(st.a[f.id + '_exp']).trim();
       });
@@ -853,7 +862,7 @@ function arranca() {
     var payload = {};
     DATA.sections.forEach(function (s) {
       s.fields.forEach(function (f) {
-        if (!st.vis[f.id] || f.type === 'file' || f.type === 'aviso') return;
+        if (!st.vis[f.id] || f.type === 'file' || f.type === 'aviso' || f.type === 'titulo') return;
         payload[f.id] = String(st.a[f.id] || '').trim();
         if (f.type === 'yesno' && payload[f.id] === 'Sí' && st.a[f.id + '_exp']) payload[f.id + '_exp'] = String(st.a[f.id + '_exp']).trim();
       });
