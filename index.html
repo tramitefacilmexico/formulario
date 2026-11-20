@@ -52,6 +52,24 @@
   .yn input { position:absolute; inset:0; width:100%; height:100%; margin:0; opacity:0; cursor:pointer; }
   .yn label.on { background:var(--navy); color:#fff; border-color:var(--navy); }
   .exp { margin-top:8px; }
+  .est { background:#fff; border:1px solid var(--line); border-radius:12px; padding:14px 14px 10px; margin:0 0 16px; }
+  .est-t { font-weight:700; font-size:16px; margin-bottom:10px; }
+  .est-l { list-style:none; margin:0; padding:0; }
+  .est-l li { position:relative; padding:0 0 16px 40px; min-height:30px; }
+  .est-l li:last-child { padding-bottom:4px; }
+  .est-l li:before { content:""; position:absolute; left:12px; top:26px; bottom:-2px; width:2px; background:var(--line); }
+  .est-l li:last-child:before { display:none; }
+  .est-l li.hecho:before { background:var(--green); }
+  .est-p { position:absolute; left:0; top:0; width:26px; height:26px; border-radius:50%; background:#eef2f7; color:#8aa0b6; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:13px; }
+  .est-l li.hecho .est-p { background:var(--green); color:var(--navy); }
+  .est-l li.ahora .est-p { background:var(--navy); color:#fff; box-shadow:0 0 0 4px rgba(16,48,80,.15); }
+  .est-n { font-weight:700; line-height:26px; }
+  .est-l li.pend .est-n { color:#8aa0b6; font-weight:600; }
+  .est-aqui { display:inline-block; background:#E7DCC4; color:#4A3A28; border:1px solid #C2B08A; border-radius:99px; font-size:11px; font-weight:700; padding:0 8px; margin-left:8px; vertical-align:middle; }
+  .est-a { background:#f2f5f9; border-radius:8px; padding:8px 10px; margin-top:6px; font-size:14px; font-weight:500; }
+  .est-pend { background:#fdeec2; border-radius:8px; padding:8px 10px; margin-top:6px; font-size:14px; font-weight:500; color:#6b4a00; }
+  .est-fin { text-align:center; font-weight:700; padding:4px 0 6px; }
+  .est-u { color:var(--steel); font-size:12px; margin-top:6px; }
   .okdoc { color:#2f7a1f; font-weight:500; font-size:13px; }
   .faltadoc { color:var(--err); font-weight:500; font-size:13px; }
   .redrow { display:grid; gap:8px; padding:10px; border:1px solid var(--line); border-radius:10px; margin-bottom:8px; background:#f8fbfd; }
@@ -978,6 +996,27 @@ function arranca() {
     return o;
   }
 
+  // Estado del trámite (solo China integral): 5 etapas, «Estás aquí» y lo que pasa ahora
+  function estatusEl(e) {
+    var box = h('div', { class: 'est' });
+    box.appendChild(h('div', { class: 'est-t', text: 'Estado de tu trámite' }));
+    var ol = h('ol', { class: 'est-l' });
+    e.etapas.forEach(function (et, i) {
+      var cls = i < e.actual ? 'hecho' : (i === e.actual ? 'ahora' : 'pend');
+      var li = h('li', { class: cls }, [h('span', { class: 'est-p', text: i < e.actual ? '✓' : String(i + 1) })]);
+      var t = h('div', { class: 'est-n', text: et.t });
+      if (i === e.actual) t.appendChild(h('span', { class: 'est-aqui', text: 'Estás aquí' }));
+      li.appendChild(t);
+      if (i === e.actual && e.ahora) li.appendChild(h('div', { class: 'est-a', text: e.ahora }));
+      if (i === e.actual && e.pendiente) li.appendChild(h('div', { class: 'est-pend', text: 'Para continuar necesitamos que corrijas: ' + e.pendiente }));
+      ol.appendChild(li);
+    });
+    box.appendChild(ol);
+    if (e.actual >= e.etapas.length) box.appendChild(h('div', { class: 'est-fin', text: e.ahora }));
+    if (e.actualizado) box.appendChild(h('div', { class: 'est-u', text: 'Última actualización: ' + e.actualizado + '. Si entras de nuevo, verás el avance de tu trámite.' }));
+    return box;
+  }
+
   function construyeMas() {
     $('.bar').style.display = 'none';
     $('#sub').textContent = 'Subir más documentos · ' + (DATA.paisNombre || (DATA.pais === 'Canada' ? 'Canadá' : DATA.pais));
@@ -985,6 +1024,7 @@ function arranca() {
     var app = $('#app');
     var card = h('section', { class: 'card' });
     card.appendChild(h('h2', { text: 'Ya recibimos tu formulario' }));
+    if (DATA.estatus) { var estBox = estatusEl(DATA.estatus); estBox.style.marginTop = '12px'; card.appendChild(estBox); }
     card.appendChild(h('p', { class: 'ayuda', text: 'Aquí puedes subir los documentos que falten o enviarnos otros que quieras agregar. No tienes que llenar nada otra vez.' }));
     var grupos = [];
     (DATA.docs || []).forEach(function (d) {
