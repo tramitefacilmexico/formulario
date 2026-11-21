@@ -609,6 +609,7 @@ function arranca() {
 
   // ---- documentos para firmar (China, turista): se arman aquí con las respuestas del cliente; español arriba y chino abajo, con los mismos datos
   var ZH_MEDIO = { 'Autobús': '大巴', 'Auto': '汽车', 'Tren': '火车', 'Barco o ferry': '轮船', 'A pie': '步行' };
+  var ES_MEDIO = { 'Autobús': 'autobús', 'Auto': 'auto', 'Tren': 'tren', 'Barco o ferry': 'barco o ferry', 'A pie': 'transporte a pie' };
   var ZH_PARENTESCO = { 'Esposo': '丈夫', 'Esposa': '妻子', 'Padre': '父亲', 'Madre': '母亲', 'Hijo': '儿子', 'Hija': '女儿', 'Hermano': '兄弟', 'Hermana': '姐妹', 'Abuelo': '祖父', 'Abuela': '祖母',
     'Novio': '男朋友', 'Novia': '女朋友', 'Amigo': '朋友', 'Amiga': '朋友', 'Compañero de trabajo': '同事', 'Compañera de trabajo': '同事', 'Otro familiar': '亲属' };
   function escD(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
@@ -628,7 +629,7 @@ function arranca() {
       pag.push(paginaDoc('行程补充声明',
         '本人' + sub(a.nombre) + '，在赴华行程期间将于' + sub(fechaZh(f)) + '以' + sub(ZH_MEDIO[m] || m) + '的方式自' + sub(o) + '赴' + sub(d) + '旅行，暂时无法提供交通单据证明。此声明仅用于申请人的中国签证申请。',
         'Declaración complementaria del itinerario',
-        'Yo, ' + sub(a.nombre) + ', durante mi viaje a China viajaré desde ' + sub(o) + ' a ' + sub(d) + ' por medio de ' + sub(m) + ' en la fecha de ' + sub(fechaEs(f)) + ', y temporalmente no puedo proporcionar los comprobantes de transporte. Esta declaración es únicamente para la solicitud de visa china del solicitante.'));
+        'Yo, ' + sub(a.nombre) + ', durante mi viaje a China viajaré desde ' + sub(o) + ' a ' + sub(d) + ' por medio de ' + sub(ES_MEDIO[m] || m) + ' en la fecha de ' + sub(fechaEs(f)) + ', y temporalmente no puedo proporcionar los comprobantes de transporte. Esta declaración es únicamente para la solicitud de visa china del solicitante.'));
     }
     return { paginas: pag, faltan: faltan || !pag.length, titulo: 'Declaración complementaria de itinerario', pide: 'las ciudades, el medio de transporte y la fecha de cada tramo' };
   }
