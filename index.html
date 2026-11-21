@@ -230,6 +230,7 @@ function arranca() {
       document.body.innerHTML = '<div style="font-family:Roboto,Arial,sans-serif;background:#f2f5f9;color:#103050;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:16px;box-sizing:border-box"><div style="max-width:420px;background:#fff;border-radius:12px;padding:28px;border-top:5px solid #80c040;box-shadow:0 2px 12px rgba(0,0,0,.08)"><h2 style="margin-top:0">Gracias</h2><p>Ya puedes cerrar esta pestaña.</p><p style="font-size:14px;color:#52667c">Si necesitas volver, abre de nuevo el link que te mandamos por WhatsApp.</p></div></div>';
     }, 300);
   }
+  var idsSub = new Map();   // identificador de cada archivo para que un reintento no lo duplique en Drive
   var yaSubidos = [];   // archivos que ya se subieron (si el envío falla y se reintenta, no se vuelven a subir)
   var cur = 0, visSecs = [];   // formulario por pasos: una sección a la vez (cur = posición en las secciones visibles)
   var modoCorregir = false, solo = {};   // corrección: solo se muestran las secciones elegidas (solo[id] = true)
@@ -816,22 +817,28 @@ function arranca() {
         var m = e && e.message ? e.message : String(e);
         // "otro proceso retuvo el candado": el servidor estaba atendiendo a otras personas; no es culpa del cliente
         var ocupado = /candado|lock/i.test(m);
+        var red = /Failed to fetch|aborted|abort|NetworkError|Load failed|network/i.test(m);   // el navegador no pudo hablar con el servidor (a veces Google corta una petición sola)
         var err = new Error(ocupado ? 'El sistema estaba atendiendo a otras personas y no pudo recibirte a tiempo.'
-          : /Failed to fetch|aborted|abort/i.test(m) ? 'El servidor tardó demasiado o no hay conexión. Revisa tu internet e intenta de nuevo.' : m);
-        err.ocupado = ocupado;
+          : red ? 'El servidor tardó demasiado o no hay conexión. Revisa tu internet e intenta de nuevo.' : m);
+        err.ocupado = ocupado; err.red = red; err.crudo = m;
         throw err;
       });
   }
-  // Si el servidor estaba ocupado, se reintenta solo (hasta 3 veces en total): todos los pasos se pueden repetir sin duplicar nada
+  // Si el servidor estaba ocupado o se cortó la conexión (falla momentánea de Google), se reintenta solo (hasta 5 veces en total, esperando cada vez un poco más):
+  // todos los pasos se pueden repetir sin duplicar nada (los archivos llevan un identificador que el servidor reconoce)
   function run(fn) {
     var args = Array.prototype.slice.call(arguments, 1), n = 0;
     function intenta() {
       return llama(fn, args).catch(function (e) {
-        if (!e.ocupado || ++n >= 3) throw e;
-        return new Promise(function (ok) { setTimeout(ok, 3000 * n); }).then(intenta);
+        if (!(e.ocupado || e.red) || ++n >= 5) throw e;
+        return new Promise(function (ok) { setTimeout(ok, 2000 * n); }).then(intenta);
       });
     }
     return intenta();
+  }
+  // Avisa al servidor (sin datos del cliente) que un envío falló aun con reintentos, para poder revisarlo; no afecta al cliente
+  function reportaFallo(etapa, e) {
+    try { new Image().src = API + '?cerr=' + encodeURIComponent(String(etapa) + ': ' + String((e && (e.crudo || e.message)) || e).slice(0, 120) + ' | ' + String(navigator.userAgent).slice(0, 90) + ' | ' + (navigator.onLine ? 'online' : 'offline')); } catch (x) {}
   }
   function aBase64(blob) {
     return new Promise(function (ok, ko) {
@@ -1005,8 +1012,10 @@ function arranca() {
       })
       .catch(function (e) {
         if (etapa === 'finalizar') { confirmaEnvio(e); return; }   // lo importante ya llegó: solo falta confirmar
+        reportaFallo(etapa, e);
         var b = h('button', { class: 'send', type: 'button', text: 'Volver al formulario' }); b.addEventListener('click', cierra);
-        overlay(h('div', {}, [h('h2', { text: 'No se pudo enviar' }), h('p', { text: String(e.message || e) }), h('p', { class: 'help', text: 'Tus respuestas siguen aquí. Puedes intentar de nuevo.' }), b]));
+        var re = h('button', { class: 'send', type: 'button', text: 'Reintentar ahora' }); re.addEventListener('click', envioFinal);   // retoma donde se quedó: lo ya subido no se repite
+        overlay(h('div', {}, [h('h2', { text: 'No se pudo enviar' }), h('p', { text: String(e.message || e) }), h('p', { class: 'help', text: 'Tus respuestas siguen aquí y lo que ya se subió no se pierde. Pulsa «Reintentar ahora»; si vuelve a fallar, espera un minuto y prueba otra vez.' }), re, DOM.createTextNode(' '), b]));
       });
   }
 
@@ -1036,14 +1045,16 @@ function arranca() {
       function lanza() {
         if (fallo) return;
         if (!colas.length || (siguiente >= colas.length && activos === 0)) { ok(); return; }
-        while (!fallo && activos < 3 && siguiente < colas.length) {
+        while (!fallo && activos < 2 && siguiente < colas.length) {
           activos++;
           colas[siguiente++].reduce(function (p, e) {
             return p.then(function () {
               if (yaSubidos.indexOf(e.file) >= 0) { if (alTerminarUno) alTerminarUno(); return; }   // ya llegó en un intento anterior: no se duplica
+              if (!idsSub.has(e.file)) idsSub.set(e.file, Math.random().toString(36).slice(2) + Date.now().toString(36));   // el mismo en todos los reintentos (también los manuales): el servidor no duplica el archivo
+              e.idSub = idsSub.get(e.file);
               return prepara(e.file).then(function (pf) { return aBase64(pf.blob).then(function (b64) {
-                return run('subir', DATA.token, e.id, e.label, pf.name, pf.mime, b64).catch(function () {
-                  return run('subir', DATA.token, e.id, e.label, pf.name, pf.mime, b64); // un reintento
+                return run('subir', DATA.token, e.id, e.label, pf.name, pf.mime, b64, e.idSub).catch(function () {
+                  return run('subir', DATA.token, e.id, e.label, pf.name, pf.mime, b64, e.idSub); // otra ronda de reintentos
                 });
               }); }).then(function () { yaSubidos.push(e.file); if (alTerminarUno) alTerminarUno(); });
             });
