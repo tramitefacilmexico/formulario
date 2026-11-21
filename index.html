@@ -541,6 +541,23 @@ function arranca() {
       };
       wrap.appendChild(h('div', { class: 'fecha' }, [sd, sm, sa]));
       wrap.appendChild(r.input);
+    } else if (f.type === 'hora') {
+      // Dos listas (hora / minutos, formato de 24 horas); se guarda como "14:30"
+      var oph = function (v, t) { return h('option', { value: v, text: t }); };
+      var sh = h('select', { 'aria-label': 'Hora' }, [oph('', 'Hora')]), smi = h('select', { 'aria-label': 'Minutos' }, [oph('', 'Minutos')]);
+      var j, jj;
+      for (j = 0; j < 24; j++) { jj = j < 10 ? '0' + j : String(j); sh.appendChild(oph(jj, jj)); }
+      for (j = 0; j < 60; j++) { jj = j < 10 ? '0' + j : String(j); smi.appendChild(oph(jj, jj)); }
+      r.input = h('input', { id: id, type: 'hidden' });
+      var updH = function () { r.input.value = (sh.value && smi.value) ? sh.value + ':' + smi.value : ''; };
+      [sh, smi].forEach(function (s) { s.addEventListener('change', updH); });
+      r.setVal = function (v) {
+        var p = String(v || '').split(':');
+        if (p.length === 2) { sh.value = p[0]; smi.value = p[1]; } else { sh.value = smi.value = ''; }
+        updH();
+      };
+      wrap.appendChild(h('div', { class: 'fecha', style: 'grid-template-columns:1fr 1fr' }, [sh, smi]));
+      wrap.appendChild(r.input);
     } else {
       var type = f.type === 'email' ? 'email' : f.type === 'tel' ? 'tel' : f.type === 'date' ? 'date' : 'text';
       r.input = h('input', { id: id, type: type });
