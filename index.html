@@ -35,6 +35,9 @@
   .tipbtn[aria-expanded=true] { background:var(--steel); color:#fff; }
   .tip { background:#eef4f9; border-left:4px solid var(--green); border-radius:6px; padding:9px 12px; margin:4px 0 8px; font-size:14px; color:var(--navy); }
   .tip[hidden] { display:none; }
+  .docbox { background:#eef4f9; border:1px solid var(--line); border-left:4px solid var(--green); border-radius:8px; padding:12px 14px; margin:6px 0 10px; }
+  .docbox h3 { margin:0 0 4px; font-size:16px; color:var(--navy); } .docbox p { margin:0 0 10px; font-size:14px; color:var(--navy); }
+  .docmsg { margin-top:8px; font-size:13px; color:#a51d1d; }
   .tip.alto { background:#fdecea; border:2px solid #c0392b; border-left-width:8px; color:#7a1a10; font-weight:700; font-size:17px; padding:14px 16px; margin:12px 0; }
   .tip a { color:var(--steel); font-weight:500; }
   .ptitulo { margin:18px 0 6px; }
@@ -366,6 +369,17 @@ function arranca() {
       wti.appendChild(rti.input); refs[f.id] = rti;
       return wti;
     }
+    if (f.type === 'documento') {   // botón que arma un documento (para imprimir y firmar) con las respuestas; no es pregunta y no guarda respuesta
+      var bxd = h('div', { class: 'docbox' }, [h('h3', { text: f.label }), h('p', { text: f.help || '' })]);
+      var msgd = h('div', { class: 'docmsg' });
+      var btd = h('button', { type: 'button', class: 'send', text: 'Ver mi documento (para imprimir y firmar)' });
+      btd.addEventListener('click', function () { abreDocumento(f.doc, msgd); });
+      bxd.appendChild(btd); bxd.appendChild(msgd);
+      var wdc = h('div', { class: 'f', hidden: '' }, [bxd]);
+      var rdc = { def: f, wrap: wdc, input: h('textarea', { id: 'c_' + f.id, hidden: '' }) };
+      wdc.appendChild(rdc.input); refs[f.id] = rdc;
+      return wdc;
+    }
     if (f.type === 'aviso') {   // texto informativo que se muestra según una condición; no es pregunta y no guarda respuesta
       var wav = h('div', { class: 'f', hidden: '' }, [h('div', { class: 'tip' + (f.bloquea ? ' alto' : ''), text: f.label })]);
       var rav = { def: f, wrap: wav, input: h('textarea', { id: 'c_' + f.id, hidden: '' }) };
@@ -593,6 +607,61 @@ function arranca() {
     return a;
   }
 
+  // ---- documentos para firmar (China, turista): se arman aquí con las respuestas del cliente; español arriba y chino abajo, con los mismos datos
+  var ZH_MEDIO = { 'Autobús': '大巴', 'Auto': '汽车', 'Tren': '火车', 'Barco o ferry': '轮船', 'A pie': '步行' };
+  var ZH_PARENTESCO = { 'Esposo': '丈夫', 'Esposa': '妻子', 'Padre': '父亲', 'Madre': '母亲', 'Hijo': '儿子', 'Hija': '女儿', 'Hermano': '兄弟', 'Hermana': '姐妹', 'Abuelo': '祖父', 'Abuela': '祖母',
+    'Novio': '男朋友', 'Novia': '女朋友', 'Amigo': '朋友', 'Amiga': '朋友', 'Compañero de trabajo': '同事', 'Compañera de trabajo': '同事', 'Otro familiar': '亲属' };
+  function escD(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+  function fechaEs(iso) { var p = String(iso || '').split('-'); return p.length === 3 ? p[2] + '/' + p[1] + '/' + p[0] : ''; }
+  function fechaZh(iso) { var p = String(iso || '').split('-'); return p.length === 3 ? p[0] + '年' + Number(p[1]) + '月' + Number(p[2]) + '日' : ''; }
+  function sub(s) { return '<u>&nbsp;' + escD(s) + '&nbsp;</u>'; }
+  function paginaDoc(zhTitulo, zh, esTitulo, es) {
+    return '<section class="pg"><h1 class="zh">' + zhTitulo + '</h1><p class="zh">' + zh + '</p><p class="firma zh">声明人签名：<span></span></p><p class="firma zh">日　　期：<span></span></p>' +
+      '<h2>' + esTitulo + '</h2><p>' + es + '</p><p class="firma">Firma del declarante: <span></span></p><p class="firma">Fecha: <span></span></p></section>';
+  }
+  function docItinerario(a, st) {
+    var pag = [], faltan = false, k;
+    for (k = 1; k <= 3; k++) {
+      if (!st.vis['tramo' + k + '_origen']) continue;
+      var p = 'tramo' + k, o = a[p + '_origen'], d = a[p + '_destino'], m = a[p + '_medio'], f = a[p + '_salida'];
+      if (!String(o || '').trim() || !String(d || '').trim() || !m || !f) { faltan = true; continue; }
+      pag.push(paginaDoc('行程补充声明',
+        '本人' + sub(a.nombre) + '，在赴华行程期间将于' + sub(fechaZh(f)) + '以' + sub(ZH_MEDIO[m] || m) + '的方式自' + sub(o) + '赴' + sub(d) + '旅行，暂时无法提供交通单据证明。此声明仅用于申请人的中国签证申请。',
+        'Declaración complementaria del itinerario',
+        'Yo, ' + sub(a.nombre) + ', durante mi viaje a China viajaré desde ' + sub(o) + ' a ' + sub(d) + ' por medio de ' + sub(m) + ' en la fecha de ' + sub(fechaEs(f)) + ', y temporalmente no puedo proporcionar los comprobantes de transporte. Esta declaración es únicamente para la solicitud de visa china del solicitante.'));
+    }
+    return { paginas: pag, faltan: faltan || !pag.length, titulo: 'Declaración complementaria de itinerario', pide: 'las ciudades, el medio de transporte y la fecha de cada tramo' };
+  }
+  function docHotel(a, st) {
+    var pag = [], faltan = false, k;
+    for (k = 1; k <= 3; k++) {
+      if (!st.vis['hotel' + k + '_nombre']) continue;
+      var p = 'hotel' + k, n = a[p + '_nombre'], num = a[p + '_pasaporte'], rel = a[p + '_relacion'], d1 = a[p + '_llegada'], d2 = a[p + '_salida'];
+      if (!String(n || '').trim() || !String(num || '').trim() || !rel || !d1 || !d2) { faltan = true; continue; }
+      pag.push(paginaDoc('酒店订房人声明',
+        '本人' + sub(n) + '护照号' + sub(num) + '，是申请人' + sub(a.nombre) + '的' + sub(ZH_PARENTESCO[rel] || rel) + '，我们将一同前往中国，在' + sub(fechaZh(d1) + '至' + fechaZh(d2)) + '期间我们将共同居住在我名下预定的酒店里。此声明仅用于申请人的中国签证申请。',
+        'Declaración de la Persona que Reserva el Hotel',
+        'Yo, ' + sub(n) + ', con número de pasaporte: ' + sub(num) + ', soy ' + sub(String(rel).toLowerCase()) + ' del solicitante ' + sub(a.nombre) + '. Viajaremos juntos a China y, durante el período de ' + sub(fechaEs(d1) + ' al ' + fechaEs(d2)) + ', nos alojaremos conjuntamente en el hotel reservado a mi nombre. Esta declaración se utilizará únicamente para la solicitud del visado chino del solicitante.'));
+    }
+    return { paginas: pag, faltan: faltan || !pag.length, titulo: 'Responsiva de la persona que reserva el hotel', pide: 'el nombre, el pasaporte, qué es de ti y las fechas de cada persona que reservó' };
+  }
+  function abreDocumento(doc, msgEl) {
+    var st = state(), a = st.a; msgEl.textContent = '';
+    if (!String(a.nombre || '').trim()) { msgEl.textContent = 'Primero escribe tu nombre completo en «Información personal».'; return; }
+    var r = doc === 'itinerario' ? docItinerario(a, st) : docHotel(a, st);
+    if (r.faltan) { msgEl.textContent = 'Completa arriba ' + r.pide + ' para poder armar el documento.'; return; }
+    var css = 'body{font-family:"Times New Roman","Songti SC","SimSun","Noto Serif CJK SC","Microsoft YaHei",serif;color:#000;margin:0}.bar{position:sticky;top:0;background:#1f3555;color:#fff;padding:10px 14px;font:14px Arial,sans-serif;display:flex;gap:12px;align-items:center;flex-wrap:wrap}' +
+      '.bar button{background:#7ec64e;color:#1f3555;border:0;border-radius:8px;padding:9px 16px;font:bold 14px Arial,sans-serif;cursor:pointer}.pg{max-width:720px;margin:0 auto;padding:36px 28px;page-break-after:always;line-height:2}' +
+      '.pg:last-child{page-break-after:auto}h1{text-align:center;font-size:22px;margin:0 0 18px}h2{text-align:center;font-size:18px;margin:34px 0 14px}p{font-size:16px;margin:0 0 8px;text-align:justify}' +
+      '.firma{text-align:center}.firma span{display:inline-block;border-bottom:1px solid #000;width:230px;height:18px}u{text-decoration:underline}' +
+      '@media print{.bar{display:none}.pg{padding:0;max-width:none}}';
+    var html = '<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>' + r.titulo + '</title><style>' + css + '</style></head><body>' +
+      '<div class="bar"><button onclick="window.print()">Imprimir o guardar como PDF</button><span>Revisa que los datos estén bien, imprímelo, fírmalo y sube la foto en «Documentos».</span></div>' + r.paginas.join('') + '</body></html>';
+    var w = window.open('', '_blank');
+    if (!w) { msgEl.textContent = 'Tu navegador bloqueó la ventana. Permite las ventanas emergentes de esta página e inténtalo de nuevo.'; return; }
+    w.document.open(); w.document.write(html); w.document.close();
+  }
+
   function state() {
     var a = raw();
     var x = { _pais: DATA.pais, _tipo: DATA.tipo, _menor: isMinor(a.fechaNac, 18), _menor14: isMinor(a.fechaNac, 14) };
@@ -811,7 +880,7 @@ function arranca() {
       if (!solo[s.id] || !st.vis['sec:' + s.id]) return;
       secs.push(s.id);
       s.fields.forEach(function (f) {
-        if (!st.vis[f.id] || f.type === 'file' || f.type === 'oculto' || f.type === 'aviso' || f.type === 'titulo') return;
+        if (!st.vis[f.id] || f.type === 'file' || f.type === 'oculto' || f.type === 'aviso' || f.type === 'titulo' || f.type === 'documento') return;
         payload[f.id] = String(st.a[f.id] || '').trim();
         if (f.type === 'yesno' && payload[f.id] === 'Sí' && st.a[f.id + '_exp']) payload[f.id + '_exp'] = String(st.a[f.id + '_exp']).trim();
       });
@@ -900,7 +969,7 @@ function arranca() {
     var payload = {};
     DATA.sections.forEach(function (s) {
       s.fields.forEach(function (f) {
-        if (!st.vis[f.id] || f.type === 'file' || f.type === 'aviso' || f.type === 'titulo') return;
+        if (!st.vis[f.id] || f.type === 'file' || f.type === 'aviso' || f.type === 'titulo' || f.type === 'documento') return;
         payload[f.id] = String(st.a[f.id] || '').trim();
         if (f.type === 'yesno' && payload[f.id] === 'Sí' && st.a[f.id + '_exp']) payload[f.id + '_exp'] = String(st.a[f.id + '_exp']).trim();
       });
