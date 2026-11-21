@@ -646,7 +646,7 @@ function arranca() {
         'Yo, ' + sub(n) + ', con número de pasaporte: ' + sub(num) + ', soy ' + sub(String(rel).toLowerCase()) + ' del solicitante ' + sub(a.nombre) + '. Viajaremos juntos a China y, durante el período de ' + sub(fechaEs(d1) + ' al ' + fechaEs(d2)) + ', nos alojaremos conjuntamente en el hotel o los hoteles reservados a mi nombre. Esta declaración se utilizará únicamente para la solicitud del visado chino del solicitante.'));
     }
     return { paginas: pag, faltan: faltan || !pag.length, titulo: 'Responsiva de la persona que reserva el hotel', pide: 'el nombre, el pasaporte, qué es de ti y las fechas de cada persona que reservó',
-      pasos: ['Imprime el documento (una hoja por persona que reservó) o guárdalo como PDF.', 'Mándaselo a quien reservó el hotel para que lo firme y le ponga la fecha.', 'Sube la foto firmada en «Documentos», al final del formulario, junto con su pasaporte (o su INE si no tiene pasaporte).'] };
+      pasos: ['Imprime el documento (una hoja por persona que reservó) o guárdalo como PDF.', 'Mándaselo a quien reservó el hotel para que lo firme y le ponga la fecha.', 'Sube la foto firmada en «Documentos», al final del formulario, junto con la foto de su pasaporte.'] };
   }
   function abreDocumento(doc, msgEl) {
     var st = state(), a = st.a; msgEl.textContent = '';
