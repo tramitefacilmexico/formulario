@@ -631,7 +631,8 @@ function arranca() {
         'Declaración complementaria del itinerario',
         'Yo, ' + sub(a.nombre) + ', durante mi viaje a China viajaré desde ' + sub(o) + ' a ' + sub(d) + ' por medio de ' + sub(ES_MEDIO[m] || m) + ' en la fecha de ' + sub(fechaEs(f)) + ', y temporalmente no puedo proporcionar los comprobantes de transporte. Esta declaración es únicamente para la solicitud de visa china del solicitante.'));
     }
-    return { paginas: pag, faltan: faltan || !pag.length, titulo: 'Declaración complementaria de itinerario', pide: 'las ciudades, el medio de transporte y la fecha de cada tramo' };
+    return { paginas: pag, faltan: faltan || !pag.length, titulo: 'Declaración complementaria de itinerario', pide: 'las ciudades, el medio de transporte y la fecha de cada tramo',
+      pasos: ['Imprime el documento (una hoja por tramo) o guárdalo como PDF.', 'Fírmalo y ponle la fecha.', 'Sube la foto en «Documentos», al final del formulario.'] };
   }
   function docHotel(a, st) {
     var pag = [], faltan = false, k;
@@ -642,22 +643,27 @@ function arranca() {
       pag.push(paginaDoc('酒店订房人声明',
         '本人' + sub(n) + '护照号' + sub(num) + '，是申请人' + sub(a.nombre) + '的' + sub(ZH_PARENTESCO[rel] || rel) + '，我们将一同前往中国，在' + sub(fechaZh(d1) + '至' + fechaZh(d2)) + '期间我们将共同居住在我名下预定的酒店里。此声明仅用于申请人的中国签证申请。',
         'Declaración de la Persona que Reserva el Hotel',
-        'Yo, ' + sub(n) + ', con número de pasaporte: ' + sub(num) + ', soy ' + sub(String(rel).toLowerCase()) + ' del solicitante ' + sub(a.nombre) + '. Viajaremos juntos a China y, durante el período de ' + sub(fechaEs(d1) + ' al ' + fechaEs(d2)) + ', nos alojaremos conjuntamente en el hotel reservado a mi nombre. Esta declaración se utilizará únicamente para la solicitud del visado chino del solicitante.'));
+        'Yo, ' + sub(n) + ', con número de pasaporte: ' + sub(num) + ', soy ' + sub(String(rel).toLowerCase()) + ' del solicitante ' + sub(a.nombre) + '. Viajaremos juntos a China y, durante el período de ' + sub(fechaEs(d1) + ' al ' + fechaEs(d2)) + ', nos alojaremos conjuntamente en el hotel o los hoteles reservados a mi nombre. Esta declaración se utilizará únicamente para la solicitud del visado chino del solicitante.'));
     }
-    return { paginas: pag, faltan: faltan || !pag.length, titulo: 'Responsiva de la persona que reserva el hotel', pide: 'el nombre, el pasaporte, qué es de ti y las fechas de cada persona que reservó' };
+    return { paginas: pag, faltan: faltan || !pag.length, titulo: 'Responsiva de la persona que reserva el hotel', pide: 'el nombre, el pasaporte, qué es de ti y las fechas de cada persona que reservó',
+      pasos: ['Imprime el documento (una hoja por persona que reservó) o guárdalo como PDF.', 'Mándaselo a quien reservó el hotel para que lo firme y le ponga la fecha.', 'Sube la foto firmada en «Documentos», al final del formulario, junto con su pasaporte (o su INE si no tiene pasaporte).'] };
   }
   function abreDocumento(doc, msgEl) {
     var st = state(), a = st.a; msgEl.textContent = '';
     if (!String(a.nombre || '').trim()) { msgEl.textContent = 'Primero escribe tu nombre completo en «Información personal».'; return; }
     var r = doc === 'itinerario' ? docItinerario(a, st) : docHotel(a, st);
     if (r.faltan) { msgEl.textContent = 'Completa arriba ' + r.pide + ' para poder armar el documento.'; return; }
-    var css = 'body{font-family:"Times New Roman","Songti SC","SimSun","Noto Serif CJK SC","Microsoft YaHei",serif;color:#000;margin:0}.bar{position:sticky;top:0;background:#1f3555;color:#fff;padding:10px 14px;font:14px Arial,sans-serif;display:flex;gap:12px;align-items:center;flex-wrap:wrap}' +
-      '.bar button{background:#7ec64e;color:#1f3555;border:0;border-radius:8px;padding:9px 16px;font:bold 14px Arial,sans-serif;cursor:pointer}.pg{max-width:720px;margin:0 auto;padding:36px 28px;page-break-after:always;line-height:2}' +
+    var css = 'body{font-family:"Times New Roman","Songti SC","SimSun","Noto Serif CJK SC","Microsoft YaHei",serif;color:#000;margin:0}' +
+      '.fin{max-width:720px;margin:10px auto 40px;padding:22px 26px;background:#eef4f9;border:1px solid #d9e2ec;border-left:6px solid #7ec64e;border-radius:12px;font-family:Arial,sans-serif;color:#1f3555}' +
+      '.fin h3{margin:0 0 10px;font-size:20px}.fin ol{margin:0 0 18px;padding-left:22px;font-size:16px;line-height:1.6}.fin button{display:block;width:100%;background:#7ec64e;color:#1f3555;border:0;border-radius:12px;padding:16px 20px;font:bold 18px Arial,sans-serif;cursor:pointer}' +
+      '.fin button:hover{background:#6db640}.fin p{margin:12px 0 0;font-size:13px;color:#5a7490;text-align:center}.pg{max-width:720px;margin:0 auto;padding:36px 28px;page-break-after:always;line-height:2}' +
       '.pg:last-child{page-break-after:auto}h1{text-align:center;font-size:22px;margin:0 0 18px}h2{text-align:center;font-size:18px;margin:34px 0 14px}p{font-size:16px;margin:0 0 8px;text-align:justify}p.zh{text-align:left}' +
       '.firma{text-align:center}.firma span{display:inline-block;border-bottom:1px solid #000;width:230px;height:18px}u{text-decoration:underline}' +
-      '@media print{.bar{display:none}.pg{padding:0;max-width:none}}';
+      '@media print{.fin{display:none}.pg{padding:0;max-width:none}}';
     var html = '<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>' + r.titulo + '</title><style>' + css + '</style></head><body>' +
-      '<div class="bar"><button onclick="window.print()">Imprimir o guardar como PDF</button><span>Revisa que los datos estén bien, imprímelo, fírmalo y sube la foto en «Documentos».</span></div>' + r.paginas.join('') + '</body></html>';
+      r.paginas.join('') +
+      '<div class="fin"><h3>Siguientes pasos</h3><ol>' + r.pasos.map(function (t) { return '<li>' + t + '</li>'; }).join('') + '</ol>' +
+      '<button onclick="window.print()">🖨️ Imprimir o guardar como PDF</button><p>Revisa antes que los datos estén bien. Si algo está mal, regresa al formulario, corrígelo y vuelve a abrir el documento.</p></div></body></html>';
     var w = window.open('', '_blank');
     if (!w) { msgEl.textContent = 'Tu navegador bloqueó la ventana. Permite las ventanas emergentes de esta página e inténtalo de nuevo.'; return; }
     w.document.open(); w.document.write(html); w.document.close();
