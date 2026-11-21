@@ -35,6 +35,7 @@
   .tipbtn[aria-expanded=true] { background:var(--steel); color:#fff; }
   .tip { background:#eef4f9; border-left:4px solid var(--green); border-radius:6px; padding:9px 12px; margin:4px 0 8px; font-size:14px; color:var(--navy); }
   .tip[hidden] { display:none; }
+  .tip.alto { background:#fdecea; border:2px solid #c0392b; border-left-width:8px; color:#7a1a10; font-weight:700; font-size:17px; padding:14px 16px; margin:12px 0; }
   .tip a { color:var(--steel); font-weight:500; }
   .ptitulo { margin:18px 0 6px; }
   .ptitulo.linea { margin-top:26px; padding-top:18px; border-top:2px solid var(--line); }
@@ -366,7 +367,7 @@ function arranca() {
       return wti;
     }
     if (f.type === 'aviso') {   // texto informativo que se muestra según una condición; no es pregunta y no guarda respuesta
-      var wav = h('div', { class: 'f', hidden: '' }, [h('div', { class: 'tip', text: f.label })]);
+      var wav = h('div', { class: 'f', hidden: '' }, [h('div', { class: 'tip' + (f.bloquea ? ' alto' : ''), text: f.label })]);
       var rav = { def: f, wrap: wav, input: h('textarea', { id: 'c_' + f.id, hidden: '' }) };
       wav.appendChild(rav.input); refs[f.id] = rav;
       return wav;
@@ -665,6 +666,8 @@ function arranca() {
     if (atras) atras.style.display = pasos && cur > 0 ? '' : 'none';
     if (intro) intro.style.display = pasos && cur > 0 ? 'none' : '';
     $('#send').textContent = !pasos || cur >= visSecs.length - 1 ? 'Enviar' : 'Siguiente →';
+    var bloq = DATA.sections.some(function (s) { return s.fields.some(function (f) { return f.bloquea && st.vis[f.id]; }); });   // un aviso de «no sigas» detiene el formulario: no hay más preguntas ni botón de enviar
+    $('#send').style.display = bloq ? 'none' : '';
     // progreso: campos obligatorios visibles ya llenos
     var tot = 0, ok = 0;
     DATA.sections.forEach(function (s) {
