@@ -653,7 +653,7 @@ function arranca() {
     if (r.faltan) { msgEl.textContent = 'Completa arriba ' + r.pide + ' para poder armar el documento.'; return; }
     var css = 'body{font-family:"Times New Roman","Songti SC","SimSun","Noto Serif CJK SC","Microsoft YaHei",serif;color:#000;margin:0}.bar{position:sticky;top:0;background:#1f3555;color:#fff;padding:10px 14px;font:14px Arial,sans-serif;display:flex;gap:12px;align-items:center;flex-wrap:wrap}' +
       '.bar button{background:#7ec64e;color:#1f3555;border:0;border-radius:8px;padding:9px 16px;font:bold 14px Arial,sans-serif;cursor:pointer}.pg{max-width:720px;margin:0 auto;padding:36px 28px;page-break-after:always;line-height:2}' +
-      '.pg:last-child{page-break-after:auto}h1{text-align:center;font-size:22px;margin:0 0 18px}h2{text-align:center;font-size:18px;margin:34px 0 14px}p{font-size:16px;margin:0 0 8px;text-align:justify}' +
+      '.pg:last-child{page-break-after:auto}h1{text-align:center;font-size:22px;margin:0 0 18px}h2{text-align:center;font-size:18px;margin:34px 0 14px}p{font-size:16px;margin:0 0 8px;text-align:justify}p.zh{text-align:left}' +
       '.firma{text-align:center}.firma span{display:inline-block;border-bottom:1px solid #000;width:230px;height:18px}u{text-decoration:underline}' +
       '@media print{.bar{display:none}.pg{padding:0;max-width:none}}';
     var html = '<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>' + r.titulo + '</title><style>' + css + '</style></head><body>' +
