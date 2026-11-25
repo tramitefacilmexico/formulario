@@ -114,7 +114,7 @@
   .volver { display:block; margin:0 0 12px; padding:11px 14px; background:#fff; border:1px solid var(--steel); border-radius:10px; color:var(--navy); font-weight:500; font-size:15px; text-decoration:none; }
   .persona { display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; padding:12px; border:1px solid var(--line); border-radius:10px; margin:10px 0; background:#fff; }
   .persona b { display:block; word-break:break-word; }
-  .persona .est { font-size:13px; color:var(--steel); }
+  .persona .pest { display:block; font-size:13px; color:var(--steel); }
   .persona a { text-decoration:none; }
   .ok .est { color:#2f7a1f; }
   .nom { margin:8px 0; }
@@ -1303,7 +1303,7 @@ function arranca() {
       var b = h('button', { class: enviado ? 'ghost' : 'send', type: 'button', text: enviado ? 'Ver o corregir' : 'Llenar formulario' });
       b.addEventListener('click', function () { location.href = pedidoUrl('&p=' + p.n); });
       card.appendChild(h('div', { class: 'persona' + (p.estado === 'Completo' ? ' ok' : '') }, [
-        h('div', {}, [h('b', { text: p.nombre || ('Persona ' + p.n) }), h('span', { class: 'est', text: ESTADOS[p.estado] || p.estado })]), b]));
+        h('div', {}, [h('b', { text: p.nombre || ('Persona ' + p.n) }), h('span', { class: 'pest', text: ESTADOS[p.estado] || p.estado })]), b]));
     });
     var card2 = h('section', { class: 'card' });
     card2.appendChild(h('h2', { text: 'Agregar otra persona' }));
